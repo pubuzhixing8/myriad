@@ -4,7 +4,7 @@
   "type": "module",
   "main": "index.js",
   "scripts": {
-    "build-web": "tsc --noEmit -p web/native/tsconfig.json",
+    "build-web": "tsc --noEmit -p web/native/tsconfig.json && npm run build --prefix web/main",
     "build": "tsc && npm run build-web"
   },
   "devDependencies": {
