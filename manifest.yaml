@@ -1,0 +1,31 @@
+# yaml-language-server: $schema=node_modules/@pc-nexus/manifest/schema/manifest.schema.json
+app:
+  version: 1.0.0
+  id: 8e4e40af-23ea-43cc-98af-1a851af87319
+extensions:
+  - key: myriad-background
+    target: pcm:wiki:document:block
+    title: 背景图
+    resource: background
+    layout: bodied
+    resolver:
+      function: resolver
+    behavior: modal
+    edit:
+      title: 设置背景图
+      resource: background
+      viewport:
+        size: large
+      openOnInsert: true
+functions:
+  - key: resolver
+    handler: index.resolver
+resources:
+  - key: background
+    path: web/native/main.tsx
+    render: native
+permissions:
+  scopes: []
+  external:
+    images:
+      - https://images.unsplash.com
