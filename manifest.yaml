@@ -3,6 +3,19 @@ app:
   version: 1.0.0
   id: 8e4e40af-23ea-43cc-98af-1a851af87319
 extensions:
+  - key: myriad-button
+    target: pcm:wiki:document:block
+    title: Button 按钮
+    resource: button
+    resolver:
+      function: resolver
+    behavior: modal
+    edit:
+      title: 设置按钮
+      resource: button
+      viewport:
+        size: large
+      openOnInsert: true
   - key: myriad-background
     target: pcm:wiki:document:block
     title: 背景图
@@ -21,6 +34,8 @@ functions:
   - key: resolver
     handler: index.resolver
 resources:
+  - key: button
+    path: web/main/dist
   - key: background
     path: web/native/main.tsx
     render: native
@@ -29,3 +44,4 @@ permissions:
   external:
     images:
       - https://images.unsplash.com
+      - https://at.alicdn.com
