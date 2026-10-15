@@ -7,6 +7,7 @@ extensions:
     target: pcm:wiki:document:block
     title: Button 按钮
     resource: button
+    layout: inline
     resolver:
       function: resolver
     behavior: modal
