@@ -5,28 +5,32 @@ app:
 extensions:
   - key: myriad-button
     target: pcm:wiki:document:block
-    title: Button 按钮
+    title: Myriad - Button
+    icon: resource:button/myriad.svg
     resource: button
     layout: inline
     resolver:
       function: resolver
     behavior: modal
     edit:
-      title: 设置按钮
+      title: Myriad - Button
+      icon: resource:button/myriad.svg
       resource: button
       viewport:
         size: large
       openOnInsert: true
   - key: myriad-background
     target: pcm:wiki:document:block
-    title: 背景图
+    title: Myriad - Background
+    icon: resource:button/myriad.svg
     resource: background
     layout: bodied
     resolver:
       function: resolver
     behavior: modal
     edit:
-      title: 设置背景图
+      title: Myriad - Background
+      icon: resource:button/myriad.svg
       resource: background
       viewport:
         size: large

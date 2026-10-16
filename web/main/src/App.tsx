@@ -95,7 +95,7 @@ function Editor({ initialConfig }: { initialConfig: ButtonConfig }) {
   }
   return <main className="editor">
     <aside className="settings">
-      <header className="settings-header"><span className="brand-mark">M</span><div><strong>Myriad Button</strong><small>创建可定制按钮</small></div></header>
+      <header className="settings-header"><img className="brand-mark" src={`${import.meta.env.BASE_URL}myriad.svg`} alt="Myriad" /><div><strong>Myriad - Button</strong><small>创建可定制按钮</small></div></header>
       <div className="top-tabs" role="tablist" aria-label="按钮设置">
         <button type="button" role="tab" aria-selected={tab === 'templates'} className={tab === 'templates' ? 'active' : ''} onClick={() => setTab('templates')}>Templates 模板</button>
         <button type="button" role="tab" aria-selected={tab === 'configuration'} className={tab === 'configuration' ? 'active' : ''} onClick={() => setTab('configuration')}>Configuration 配置</button>
