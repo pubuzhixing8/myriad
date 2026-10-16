@@ -1,6 +1,6 @@
 import { useEffect, useState, type CSSProperties } from 'react'
 import { events, router, view } from '@pc-nexus/bridge'
-import { DEFAULT_BUTTON, safeHref, TEMPLATES, type ButtonConfig, type ButtonShape, type ButtonSize, type ButtonShadow } from './button-catalog'
+import { DEFAULT_BUTTON, ICONFONT_ICONS, iconfontUrl, safeHref, TEMPLATES, type ButtonConfig, type ButtonShape, type ButtonSize, type ButtonShadow } from './button-catalog'
 import './style.css'
 
 type EntryData = { config?: Partial<ButtonConfig>; entry?: { mode?: 'view' | 'edit' } }
@@ -15,6 +15,13 @@ function safeColor(value: string, fallback: string): string {
   return /^#[0-9a-f]{6}$/i.test(value) ? value : fallback
 }
 
+function safeIconUrl(value: string): string | undefined {
+  try {
+    const url = new URL(value)
+    return url.protocol === 'https:' ? url.href : undefined
+  } catch { return undefined }
+}
+
 function ButtonSurface({ config, navigate = false }: { config: ButtonConfig; navigate?: boolean }) {
   const colors = {
     '--button-bg': config.appearance === 'outline' ? '#ffffff' : safeColor(config.backgroundColor, '#2d7ff9'),
@@ -26,9 +33,15 @@ function ButtonSurface({ config, navigate = false }: { config: ButtonConfig; nav
   } as CSSProperties
   const href = safeHref(config.href)
   const className = `styled-button shape-${config.shape} size-${config.size} shadow-${config.shadow}`
-  const icon = config.iconUrl && /^https:\/\//i.test(config.iconUrl)
-    ? <img className="button-icon" src={config.iconUrl} alt="" />
-    : config.iconText ? <span className="button-icon text-icon" aria-hidden="true">{config.iconText}</span> : null
+  const iconUrl = iconfontUrl(config.iconId) || safeIconUrl(config.iconUrl)
+  const iconStyle = iconUrl ? {
+    backgroundColor: safeColor(config.iconColor, config.textColor),
+    maskImage: `url("${iconUrl}")`,
+    WebkitMaskImage: `url("${iconUrl}")`,
+  } as CSSProperties : undefined
+  const icon = iconUrl
+    ? <span className="button-icon image-icon" style={iconStyle} aria-hidden="true" />
+    : config.iconText ? <span className="button-icon text-icon" style={{ color: safeColor(config.iconColor, config.textColor) }} aria-hidden="true">{config.iconText}</span> : null
   const content = <>{icon}<span className="button-label">{config.label || '按钮'}</span></>
   if (navigate && href) {
     return <a className={className} style={colors} href={href} aria-label={config.label || '按钮'} onClick={(event) => {
@@ -73,6 +86,7 @@ function Editor({ initialConfig }: { initialConfig: ButtonConfig }) {
   }
   async function save() {
     if (config.href.trim() && !safeHref(config.href)) { setError('请输入 http:// 或 https:// 链接'); return }
+    if (config.iconUrl.trim() && !safeIconUrl(config.iconUrl)) { setError('图标地址必须为 HTTPS URL'); return }
     setSaving(true)
     setError('')
     try { await view.submit({ config }) }
@@ -114,8 +128,13 @@ function Editor({ initialConfig }: { initialConfig: ButtonConfig }) {
             <ColorField label="Hover Text 悬停文字" value={config.hoverTextColor} onChange={(value) => change('hoverTextColor', value)} />
           </>}
           <h2>Icon 图标</h2>
-          <Field label="Icon Text 文字图标"><input value={config.iconText} onChange={(e) => change('iconText', e.target.value)} placeholder="小、哔、↓" /></Field>
-          <Field label="Icon URL"><input type="url" value={config.iconUrl} onChange={(e) => change('iconUrl', e.target.value)} placeholder="https://at.alicdn.com/..." /><small>可粘贴 iconfont.cn 图标的 HTTPS SVG 地址；填写后优先显示图片。</small></Field>
+          <Field label="选择 iconfont 图标"><div className="icon-picker">
+            <button type="button" className={!config.iconId && !config.iconUrl && !config.iconText ? 'selected' : ''} onClick={() => setConfig((current) => ({ ...current, iconId: '', iconUrl: '', iconText: '' }))}>无图标</button>
+            {ICONFONT_ICONS.map(([id, name]) => <button type="button" key={id} title={name} aria-label={name} aria-pressed={config.iconId === id} className={config.iconId === id ? 'selected' : ''} onClick={() => setConfig((current) => ({ ...current, iconId: id, iconUrl: '', iconText: '' }))}><span className="picker-icon" style={{ maskImage: `url("${iconfontUrl(id)}")`, WebkitMaskImage: `url("${iconfontUrl(id)}")` }} />{name}</button>)}
+          </div><small>图标来自 iconfont；选择后可修改颜色。</small></Field>
+          <ColorField label="Icon Color 图标颜色" value={config.iconColor} onChange={(value) => change('iconColor', value)} />
+          <Field label="自定义 iconfont SVG URL"><input type="url" value={config.iconUrl} onChange={(e) => setConfig((current) => ({ ...current, iconUrl: e.target.value, iconId: e.target.value ? '' : current.iconId }))} placeholder="https://at.alicdn.com/...svg" /><small>粘贴 HTTPS SVG 图片地址；图标会作为单色蒙版显示，支持改色。</small></Field>
+          <Field label="文字图标（兼容旧配置）"><input value={config.iconText} onChange={(e) => setConfig((current) => ({ ...current, iconText: e.target.value, iconId: e.target.value ? '' : current.iconId, iconUrl: e.target.value ? '' : current.iconUrl }))} placeholder="小、哔、↓" /></Field>
         </div>}
       </div>
     </aside>
