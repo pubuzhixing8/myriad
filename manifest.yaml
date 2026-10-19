@@ -1,7 +1,7 @@
 # yaml-language-server: $schema=node_modules/@pc-nexus/manifest/schema/manifest.schema.json
 app:
   version: 1.0.0
-  id: 98d7facb-deef-49c7-a1ad-9bc9acd9fc6e
+  id: 8e4e40af-23ea-43cc-98af-1a851af87319
 extensions:
   - key: myriad-button
     target: pcm:wiki:document:block
