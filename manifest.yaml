@@ -1,7 +1,7 @@
 # yaml-language-server: $schema=node_modules/@pc-nexus/manifest/schema/manifest.schema.json
 app:
   version: 1.0.0
-  id: 8e4e40af-23ea-43cc-98af-1a851af87319
+  id: 98d7facb-deef-49c7-a1ad-9bc9acd9fc6e
 extensions:
   - key: myriad-background
     target: pcm:wiki:document:block
@@ -17,6 +17,20 @@ extensions:
       viewport:
         size: large
       openOnInsert: true
+  - key: myriad-cards
+    target: pcm:wiki:document:block
+    title: Myriad - Cards
+    resource: cards
+    resolver:
+      function: resolver
+    behavior: modal
+    emitReadyEvent: true
+    edit:
+      title: Myriad - Cards
+      resource: cards
+      viewport:
+        size: xlarge
+      openOnInsert: true
 functions:
   - key: resolver
     handler: index.resolver
@@ -24,8 +38,12 @@ resources:
   - key: background
     path: web/native/main.tsx
     render: native
+  - key: cards
+    path: web/main/dist
 permissions:
-  scopes: []
+  scopes:
+    - pcp:read:app-user-token
+    - pcp:read:wiki:page
   external:
     images:
       - https://images.unsplash.com

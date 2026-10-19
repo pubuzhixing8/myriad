@@ -1,13 +1,31 @@
 # myriad
 
-PingCode Wiki `document:block` background image extension. It uses React Native UI and `layout: bodied` with one editable body (`main`). The Wiki editor owns the rich text; the extension saves the chosen Unsplash photo, background transparency, and vertical alignment.
+PingCode Wiki `document:block` extensions built with Nexus.
 
-## Runtime dependency
+## Myriad - Cards
 
-The `NxImage` Native UI component is implemented in the Nexus runtime. The application declares the `nx-image` tag locally until a version of `@pc-nexus/react` containing the component is published. The target PingCode host must include the corresponding Native UI mapping and opacity input before this block can render correctly. Deploying this app alone does not update the host runtime.
+`myriad-cards` is a Custom UI block for selecting Wiki pages and presenting them as visual cards. In edit mode it:
+
+- loads the current Wiki space's pages through the `listWikiPages` resolver;
+- supports paging, filtering the current result page, refresh, and selecting up to 12 pages;
+- previews alignment, card type, column count, and hover style changes immediately;
+- saves the selected page metadata in block config and refreshes it by page ID in view mode.
+
+Open `http://127.0.0.1:3100/` during local development for the edit preview, or add `?mode=view` for the saved block view. Standalone mode uses local sample data; Nexus-hosted mode uses the Wiki API.
+
+## Background block
+
+The existing `myriad-background` block remains available as a Native UI extension. Its `NxImage` component depends on the corresponding Nexus runtime mapping.
 
 ## Local checks
 
-Use Node.js 24 or newer, then run `npm install`, `npm run build-web`, and `nexus lint`. The Native UI resource entry is `web/native/main.tsx`. The generated `web/main` Custom UI scaffold is unused.
+Use Node.js 24 or newer:
+
+```bash
+npm install
+npm install --prefix web/main
+npm run build
+nexus lint
+```
 
 `nexus.json` and `nexus-bindings.json` are local platform configuration and are intentionally excluded from Git.
