@@ -64,6 +64,7 @@ permissions:
   scopes:
     - pcp:read:app-user-token
     - pcp:read:wiki:page
+    - pcp:read:wiki:space
   external:
     images:
       - https://images.unsplash.com

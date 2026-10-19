@@ -12,7 +12,7 @@ The Background and Button extensions use `web/main/public/myriad.svg` for their 
 
 In edit mode, Cards:
 
-- loads pages from the current Wiki space through the `listWikiPages` resolver;
+- loads available Wiki spaces through `listWikiSpaces`, then filters pages by the selected `space_id` through `listWikiPages`;
 - supports paging, filtering the current result page, refresh, and selecting up to 12 pages;
 - previews alignment, card type, column count, and hover style changes immediately;
 - saves selected page metadata and refreshes it by page ID in view mode.

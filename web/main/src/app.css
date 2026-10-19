@@ -109,6 +109,10 @@ button { cursor: pointer; }
 .select-field select:focus { border-color: #6d9aff; box-shadow: 0 0 0 3px rgba(92, 143, 255, .12); }
 
 .content-settings { padding-top: 24px; }
+.space-picker { margin-bottom: 24px; }
+.space-picker .select-field { margin-bottom: 10px; }
+.space-pagination { display: flex; align-items: center; justify-content: center; gap: 12px; color: #888; font-size: 12px; }
+.space-pagination .icon-button { width: 28px; height: 28px; flex-basis: 28px; }
 .content-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
 .content-heading > div > span { margin-bottom: 4px; }
 .content-heading small { display: block; color: #999; font-size: 12px; line-height: 1.4; }

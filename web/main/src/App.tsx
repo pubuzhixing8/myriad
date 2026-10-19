@@ -25,6 +25,7 @@ import './style.css'
 
 const CONFIG_CHANGED_EVENT = 'NEXUS_EXTENSION_DATA_CONFIG_CHANGED'
 const PAGE_SIZE = 10
+const SPACE_PAGE_SIZE = 20
 const MAX_PAGES = 12
 
 const FALLBACK_COVERS = [
@@ -61,6 +62,7 @@ interface CardsConfig {
   cardType: CardType
   columns: Columns
   hoverEffect: HoverEffect
+  space: WikiSpace | null
   pages: WikiPage[]
 }
 
@@ -70,9 +72,14 @@ interface WikiPagesResponse {
   values?: unknown[]
 }
 
+interface WikiSpacesResponse {
+  page_index?: number
+  total?: number
+  values?: unknown[]
+}
+
 interface ExtensionData {
   config?: unknown
-  space?: WikiSpace
   entry?: { mode?: 'view' | 'edit' }
 }
 
@@ -81,8 +88,14 @@ const DEFAULT_CONFIG: CardsConfig = {
   cardType: 'text',
   columns: 3,
   hoverEffect: 'elevate',
+  space: null,
   pages: [],
 }
+
+const MOCK_SPACES: WikiSpace[] = [
+  { id: 'demo-space', name: 'Myriad Wiki', identifier: 'MYRIAD' },
+  { id: 'team-space', name: '团队知识库', identifier: 'TEAM' },
+]
 
 const MOCK_PAGES: WikiPage[] = [
   mockPage('welcome', 'Myriad - Cards', 'Replace this text with your own content', 0),
@@ -147,17 +160,6 @@ function normalizeSpace(value: unknown): WikiSpace | null {
     : null
 }
 
-function findSpace(data: unknown): WikiSpace | null {
-  if (!isRecord(data)) return null
-  const direct = normalizeSpace(data['space'])
-  if (direct) return direct
-  for (const key of ['data', 'context', 'entry']) {
-    const nested = isRecord(data[key]) ? normalizeSpace(data[key]['space']) : null
-    if (nested) return nested
-  }
-  return null
-}
-
 function normalizeConfig(value: unknown): CardsConfig {
   if (!isRecord(value)) return DEFAULT_CONFIG
   const pages = Array.isArray(value['pages'])
@@ -172,6 +174,7 @@ function normalizeConfig(value: unknown): CardsConfig {
     cardType: cardType === 'link' || cardType === 'image' ? cardType : 'text',
     columns: columns === 1 || columns === 2 ? columns : 3,
     hoverEffect: hoverEffect === 'outline' || hoverEffect === 'none' ? hoverEffect : 'elevate',
+    space: normalizeSpace(value['space']),
     pages,
   }
 }
@@ -192,11 +195,15 @@ function CardsApp() {
   const [activeTab, setActiveTab] = useState<'general' | 'content'>('general')
   const [config, setConfig] = useState<CardsConfig>(DEFAULT_CONFIG)
   const [space, setSpace] = useState<WikiSpace | null>(null)
+  const [availableSpaces, setAvailableSpaces] = useState<WikiSpace[]>([])
+  const [spaceIndex, setSpaceIndex] = useState(0)
+  const [spaceTotal, setSpaceTotal] = useState(0)
   const [availablePages, setAvailablePages] = useState<WikiPage[]>([])
   const [pageIndex, setPageIndex] = useState(0)
   const [pageTotal, setPageTotal] = useState(0)
   const [query, setQuery] = useState('')
   const [loading, setLoading] = useState(true)
+  const [spaceLoading, setSpaceLoading] = useState(false)
   const [pageLoading, setPageLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
@@ -209,11 +216,14 @@ function CardsApp() {
     async function initialize() {
       if (!hasNexusBridge()) {
         const standaloneMode = new URLSearchParams(window.location.search).get('mode')
+        const demoSpace = MOCK_SPACES[0] ?? null
         setMode(standaloneMode === 'view' ? 'view' : 'edit')
-        setSpace({ id: 'demo-space', name: 'Myriad Wiki' })
+        setSpace(demoSpace)
+        setAvailableSpaces(MOCK_SPACES)
+        setSpaceTotal(MOCK_SPACES.length)
         setAvailablePages(MOCK_PAGES)
         setPageTotal(MOCK_PAGES.length)
-        setConfig({ ...DEFAULT_CONFIG, pages: MOCK_PAGES.slice(0, 3) })
+        setConfig({ ...DEFAULT_CONFIG, space: demoSpace, pages: MOCK_PAGES.slice(0, 3) })
         setLoading(false)
         return
       }
@@ -223,13 +233,13 @@ function CardsApp() {
         const data = context.extension.data
         const nextMode = data.entry?.mode ?? 'view'
         const nextConfig = normalizeConfig(data.config)
-        const nextSpace = findSpace(data)
         setMode(nextMode)
         setConfig(nextConfig)
-        setSpace(nextSpace)
+        setSpace(nextConfig.space)
 
         if (nextMode === 'edit') {
-          await loadPageData(0, nextSpace?.id ?? '')
+          await loadSpaceData(0)
+          if (nextConfig.space) await loadPageData(0, nextConfig.space.id)
         } else {
           if (nextConfig.pages.length) {
             try {
@@ -257,7 +267,57 @@ function CardsApp() {
     return () => subscription?.unsubscribe()
   }, [])
 
+  async function loadSpaceData(targetIndex: number) {
+    if (!hasNexusBridge()) {
+      setAvailableSpaces(MOCK_SPACES)
+      setSpaceIndex(0)
+      setSpaceTotal(MOCK_SPACES.length)
+      return
+    }
+    setSpaceLoading(true)
+    setMessage('')
+    try {
+      const result = await invoke<
+        { pageIndex: number; pageSize: number },
+        WikiSpacesResponse
+      >('listWikiSpaces', {
+        pageIndex: Math.max(0, targetIndex),
+        pageSize: SPACE_PAGE_SIZE,
+      })
+      setAvailableSpaces(
+        (Array.isArray(result.values) ? result.values : [])
+          .map(normalizeSpace)
+          .filter((item): item is WikiSpace => item !== null),
+      )
+      setSpaceIndex(Number.isFinite(result.page_index) ? Number(result.page_index) : targetIndex)
+      setSpaceTotal(Number(result.total ?? 0))
+    } catch (error) {
+      setAvailableSpaces([])
+      setMessage(error instanceof Error ? error.message : 'Wiki 空间列表加载失败')
+    } finally {
+      setSpaceLoading(false)
+    }
+  }
+
+  async function selectSpace(spaceId: string) {
+    const selected = availableSpaces.find((item) => item.id === spaceId) ?? null
+    setSpace(selected)
+    setConfig((current) => ({ ...current, space: selected, pages: [] }))
+    setAvailablePages([])
+    setPageIndex(0)
+    setPageTotal(0)
+    setQuery('')
+    setMessage('')
+    if (selected) await loadPageData(0, selected.id)
+  }
+
   async function loadPageData(targetIndex: number, selectedSpaceId = space?.id ?? '') {
+    if (!selectedSpaceId) {
+      setAvailablePages([])
+      setPageIndex(0)
+      setPageTotal(0)
+      return
+    }
     if (!hasNexusBridge()) {
       setAvailablePages(MOCK_PAGES)
       setPageIndex(0)
@@ -310,6 +370,11 @@ function CardsApp() {
 
   async function save() {
     if (saving) return
+    if (!config.space) {
+      setMessage('请先选择 Wiki 空间')
+      setActiveTab('content')
+      return
+    }
     if (!config.pages.length) {
       setMessage('请至少选择一个 Wiki 页面')
       setActiveTab('content')
@@ -332,6 +397,7 @@ function CardsApp() {
     if (!keyword) return availablePages
     return availablePages.filter((page) => page.name.toLocaleLowerCase().includes(keyword))
   }, [availablePages, query])
+  const spacePageCount = Math.max(1, Math.ceil(spaceTotal / SPACE_PAGE_SIZE))
   const pageCount = Math.max(1, Math.ceil(pageTotal / PAGE_SIZE))
 
   if (loading) {
@@ -406,21 +472,46 @@ function CardsApp() {
           </div>
         ) : (
           <div className="settings-body content-settings">
+            <div className="space-picker">
+              <label className="select-field">
+                <span>Wiki Space</span>
+                <select
+                  value={space?.id ?? ''}
+                  disabled={spaceLoading}
+                  onChange={(event) => void selectSpace(event.target.value)}
+                >
+                  <option value="">请选择 Wiki 空间</option>
+                  {space && !availableSpaces.some((item) => item.id === space.id) && (
+                    <option value={space.id}>{space.name || space.identifier || space.id}</option>
+                  )}
+                  {availableSpaces.map((item) => (
+                    <option value={item.id} key={item.id}>{item.name || item.identifier || item.id}</option>
+                  ))}
+                </select>
+              </label>
+              <div className="space-pagination" aria-label="空间列表分页">
+                <button className="icon-button" type="button" title="上一页空间" aria-label="上一页空间" disabled={spaceLoading || spaceIndex <= 0} onClick={() => void loadSpaceData(spaceIndex - 1)}><ChevronLeft /></button>
+                <span>{spaceIndex + 1} / {spacePageCount} · {spaceTotal} 个空间</span>
+                <button className="icon-button" type="button" title="下一页空间" aria-label="下一页空间" disabled={spaceLoading || spaceIndex + 1 >= spacePageCount} onClick={() => void loadSpaceData(spaceIndex + 1)}><ChevronRight /></button>
+              </div>
+            </div>
             <div className="content-heading">
               <div>
                 <span>Wiki Pages</span>
-                <small>{space?.name || space?.identifier || '当前 Wiki 空间'} · 已选 {config.pages.length}/{MAX_PAGES}</small>
+                <small>{space ? `${space.name || space.identifier || space.id} · 已选 ${config.pages.length}/${MAX_PAGES}` : '选择空间后加载页面'}</small>
               </div>
-              <button className="icon-button" type="button" title="刷新页面列表" aria-label="刷新页面列表" disabled={pageLoading} onClick={() => void loadPageData(pageIndex)}>
+              <button className="icon-button" type="button" title="刷新页面列表" aria-label="刷新页面列表" disabled={pageLoading || !space} onClick={() => void loadPageData(pageIndex)}>
                 <RefreshCw className={pageLoading ? 'spin' : ''} />
               </button>
             </div>
             <label className="search-field">
               <Search aria-hidden="true" />
-              <input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索当前页" />
+              <input type="search" value={query} disabled={!space} onChange={(event) => setQuery(event.target.value)} placeholder="搜索当前页" />
             </label>
             <div className="page-list" aria-busy={pageLoading}>
-              {pageLoading ? (
+              {!space ? (
+                <div className="list-state">请先选择 Wiki 空间</div>
+              ) : pageLoading ? (
                 <div className="list-state"><LoaderCircle className="spin" /><span>正在加载页面</span></div>
               ) : filteredPages.length ? filteredPages.map((page) => {
                 const selected = config.pages.some((item) => item.id === page.id)
@@ -434,9 +525,9 @@ function CardsApp() {
               }) : <div className="list-state">没有匹配的页面</div>}
             </div>
             <div className="pagination">
-              <button className="icon-button" title="上一页" aria-label="上一页" disabled={pageLoading || pageIndex <= 0} onClick={() => void loadPageData(pageIndex - 1)}><ChevronLeft /></button>
+              <button className="icon-button" title="上一页" aria-label="上一页" disabled={!space || pageLoading || pageIndex <= 0} onClick={() => void loadPageData(pageIndex - 1)}><ChevronLeft /></button>
               <span>{pageIndex + 1} / {pageCount} · {pageTotal} 项</span>
-              <button className="icon-button" title="下一页" aria-label="下一页" disabled={pageLoading || pageIndex + 1 >= pageCount} onClick={() => void loadPageData(pageIndex + 1)}><ChevronRight /></button>
+              <button className="icon-button" title="下一页" aria-label="下一页" disabled={!space || pageLoading || pageIndex + 1 >= pageCount} onClick={() => void loadPageData(pageIndex + 1)}><ChevronRight /></button>
             </div>
             {config.pages.length > 0 && (
               <div className="selected-pages">
