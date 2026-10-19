@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "build-native": "tsc --noEmit -p plugins/background/native-ui/tsconfig.json",
-    "build-custom-ui": "npm run build --prefix web/button && npm run build --prefix web/cards",
+    "build-custom-ui": "npm run build --prefix web/button && npm run build --prefix web/pages",
     "build-web": "npm run build-native && npm run build-custom-ui",
     "build": "tsc && npm run build-web"
   },

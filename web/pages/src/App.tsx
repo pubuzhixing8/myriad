@@ -14,20 +14,18 @@ import {
   ChevronRight,
   Columns2,
   Columns3,
+  ExternalLink,
   FileText,
-  Image as ImageIcon,
-  Link2,
+  List,
   LoaderCircle,
   Plus,
   RefreshCw,
   Search,
   Square,
-  Type,
   X,
 } from "lucide-react";
 import {
   DEFAULT_CONFIG,
-  FALLBACK_COVERS,
   MOCK_PAGES,
   MOCK_SPACES,
   mergeRefreshedPages,
@@ -35,9 +33,9 @@ import {
   normalizePage,
   normalizeSpace,
   type Alignment,
-  type CardType,
   type CardsConfig,
   type Columns,
+  type DisplayMode,
   type HoverEffect,
   type WikiPage,
   type WikiSpace,
@@ -203,7 +201,7 @@ export default function CardsApp() {
     const selected =
       availableSpaces.find((item) => item.id === spaceId) ?? null;
     setSpace(selected);
-    setConfig((current) => ({ ...current, space: selected, pages: [] }));
+    setConfig((current) => ({ ...current, space: selected }));
     setAvailablePages([]);
     setPageIndex(0);
     setPageTotal(0);
@@ -321,7 +319,7 @@ export default function CardsApp() {
     return (
       <div className="loading-screen" role="status">
         <LoaderCircle size={20} />
-        <span>正在加载页面卡片</span>
+        <span>正在加载页面列表</span>
       </div>
     );
   }
@@ -333,7 +331,7 @@ export default function CardsApp() {
       <aside className="settings-panel">
         <div className="brand-row">
           <BrandMark />
-          <h1>Myriad - Cards</h1>
+          <h1>Myriad - Pages</h1>
         </div>
 
         <div className="tabs" role="tablist" aria-label="卡片设置">
@@ -357,6 +355,19 @@ export default function CardsApp() {
 
         {activeTab === "general" ? (
           <div className="settings-body">
+            <ControlGroup label="Display">
+              <SegmentedControl
+                wide
+                value={config.display}
+                options={[
+                  { value: "card", label: "卡片", icon: <Square /> },
+                  { value: "list", label: "列表", icon: <List /> },
+                ]}
+                onChange={(display) =>
+                  patchConfig({ display: display as DisplayMode })
+                }
+              />
+            </ControlGroup>
             <ControlGroup label="Alignment">
               <SegmentedControl
                 value={config.alignment}
@@ -367,20 +378,6 @@ export default function CardsApp() {
                 ]}
                 onChange={(alignment) =>
                   patchConfig({ alignment: alignment as Alignment })
-                }
-              />
-            </ControlGroup>
-            <ControlGroup label="Card Type">
-              <SegmentedControl
-                wide
-                value={config.cardType}
-                options={[
-                  { value: "text", label: "内容卡片", icon: <Type /> },
-                  { value: "link", label: "链接卡片", icon: <Link2 /> },
-                  { value: "image", label: "图片卡片", icon: <ImageIcon /> },
-                ]}
-                onChange={(cardType) =>
-                  patchConfig({ cardType: cardType as CardType })
                 }
               />
             </ControlGroup>
@@ -575,7 +572,7 @@ export default function CardsApp() {
         )}
       </aside>
 
-      <section className="preview-panel" aria-label="卡片预览">
+      <section className="preview-panel" aria-label="页面预览">
         <div className="preview-scroll">
           <CardsGrid
             config={config}
@@ -687,27 +684,32 @@ function CardsGrid({
 }) {
   return (
     <div
-      className={`cards-grid columns-${config.columns} align-${config.alignment} card-type-${config.cardType} hover-${config.hoverEffect}`}
+      className={`cards-grid display-${config.display} columns-${config.columns} align-${config.alignment} hover-${config.hoverEffect}`}
     >
-      {config.pages.map((page, index) => {
+      {config.pages.map((page) => {
         const content = (
           <>
-            <img
-              src={
-                page.coverUrl || FALLBACK_COVERS[index % FALLBACK_COVERS.length]
-              }
-              alt=""
-            />
-            <span className="card-content">
-              <strong>{page.name}</strong>
-              <span>{page.description}</span>
-              {config.cardType === "link" && (
-                <small>
-                  <Link2 />
-                  打开 Wiki 页面
-                </small>
-              )}
+            <span className="page-card-icon">
+              <FileText />
             </span>
+            <span className="card-content">
+              <span className="page-card-type">文档</span>
+              <strong>{page.name}</strong>
+              {page.description && (
+                <span className="page-card-description">
+                  {page.description}
+                </span>
+              )}
+              <small>
+                {page.spaceName || config.space?.name || "未知空间"} ·{" "}
+                {formatDate(page.updatedAt)}
+              </small>
+            </span>
+            {page.htmlUrl && page.htmlUrl !== "#" && (
+              <span className="page-card-link" aria-hidden="true">
+                <ExternalLink />
+              </span>
+            )}
           </>
         );
         return page.htmlUrl && page.htmlUrl !== "#" ? (

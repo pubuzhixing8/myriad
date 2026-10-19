@@ -33,14 +33,17 @@ extensions:
       openOnInsert: true
   - key: myriad-cards
     target: pcm:wiki:document:block
-    title: Myriad - Cards
+    title: Myriad - Pages
+    icon: resource:button/myriad.svg
     resource: cards
+    layout: bodied
     resolver:
       function: resolver
     behavior: modal
     emitReadyEvent: true
     edit:
-      title: Myriad - Cards
+      title: Myriad - Pages
+      icon: resource:button/myriad.svg
       resource: cards
       viewport:
         size: xlarge
@@ -55,7 +58,7 @@ resources:
     path: plugins/background/native-ui/main.tsx
     render: native
   - key: cards
-    path: web/cards/dist
+    path: web/pages/dist
 permissions:
   scopes:
     - pcp:read:app-user-token

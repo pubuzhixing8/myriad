@@ -1,1 +1,1 @@
-export { resolver } from "./cards.js";
+export { resolver } from "./pages.js";
