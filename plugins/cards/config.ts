@@ -1,13 +1,6 @@
-export const FALLBACK_COVERS = [
-  "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1000&q=82",
-  "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=1000&q=82",
-  "https://images.unsplash.com/photo-1497250681960-ef046c08a56e?auto=format&fit=crop&w=1000&q=82",
-  "https://images.unsplash.com/photo-1470770841072-f978cf4d019e?auto=format&fit=crop&w=1000&q=82",
-];
-
 export type Alignment = "left" | "center" | "right";
-export type CardType = "text" | "link" | "image";
 export type Columns = 1 | 2 | 3;
+export type DisplayMode = "card" | "list";
 export type HoverEffect = "elevate" | "outline" | "none";
 
 export interface WikiSpace {
@@ -29,8 +22,8 @@ export interface WikiPage {
 
 export interface CardsConfig {
   alignment: Alignment;
-  cardType: CardType;
   columns: Columns;
+  display: DisplayMode;
   hoverEffect: HoverEffect;
   space: WikiSpace | null;
   pages: WikiPage[];
@@ -38,8 +31,8 @@ export interface CardsConfig {
 
 export const DEFAULT_CONFIG: CardsConfig = {
   alignment: "left",
-  cardType: "text",
   columns: 3,
+  display: "card",
   hoverEffect: "elevate",
   space: null,
   pages: [],
@@ -51,34 +44,24 @@ export const MOCK_SPACES: WikiSpace[] = [
 ];
 
 export const MOCK_PAGES: WikiPage[] = [
-  mockPage(
-    "welcome",
-    "Myriad - Cards",
-    "Replace this text with your own content",
-    0,
-  ),
-  mockPage("roadmap", "产品路线图", "查看本季度目标、里程碑和交付计划", 1),
-  mockPage("guide", "团队协作指南", "了解项目协作规范和常用工作流程", 2),
-  mockPage("release", "发布检查清单", "发布前需要完成的检查与确认事项", 3),
-  mockPage("research", "用户研究记录", "汇总访谈洞察与待验证的产品假设", 1),
-  mockPage("decisions", "关键决策记录", "追踪方案选择、背景信息和后续影响", 0),
+  mockPage("welcome", "Myriad - Pages"),
+  mockPage("roadmap", "产品路线图"),
+  mockPage("guide", "团队协作指南"),
+  mockPage("release", "发布检查清单"),
+  mockPage("research", "用户研究记录"),
+  mockPage("decisions", "关键决策记录"),
 ];
 
-function mockPage(
-  id: string,
-  name: string,
-  description: string,
-  cover: number,
-): WikiPage {
+function mockPage(id: string, name: string): WikiPage {
   return {
     id,
     name,
-    description,
+    description: "",
     htmlUrl: "#",
     type: "page",
     updatedAt: Date.now(),
     spaceName: "Myriad Wiki",
-    coverUrl: FALLBACK_COVERS[cover] ?? FALLBACK_COVERS[0],
+    coverUrl: "",
   };
 }
 
@@ -92,23 +75,20 @@ function textFrom(value: unknown): string {
     .trim();
 }
 
-export function normalizePage(value: unknown, index = 0): WikiPage | null {
+export function normalizePage(value: unknown): WikiPage | null {
   if (!isRecord(value)) return null;
   const id = String(value["id"] ?? "").trim();
   if (!id) return null;
   const space = isRecord(value["space"]) ? value["space"] : {};
   const cover = isRecord(value["cover"]) ? value["cover"] : {};
   const description = textFrom(
-    value["description"] ??
-      value["excerpt"] ??
-      value["summary"] ??
-      "打开页面查看完整内容",
+    value["description"] ?? value["excerpt"] ?? value["summary"] ?? "",
   );
 
   return {
     id,
     name: String(value["name"] ?? value["title"] ?? "未命名页面"),
-    description: description || "打开页面查看完整内容",
+    description,
     htmlUrl: String(
       value["htmlUrl"] ?? value["html_url"] ?? value["url"] ?? "",
     ),
@@ -119,7 +99,7 @@ export function normalizePage(value: unknown, index = 0): WikiPage | null {
       value["coverUrl"] ??
         value["cover_url"] ??
         cover["url"] ??
-        FALLBACK_COVERS[index % FALLBACK_COVERS.length],
+        "",
     ),
   };
 }
@@ -144,14 +124,14 @@ export function normalizeConfig(value: unknown): CardsConfig {
         .filter((page): page is WikiPage => page !== null)
     : [];
   const alignment = value["alignment"];
-  const cardType = value["cardType"];
   const columns = Number(value["columns"]);
+  const display = value["display"];
   const hoverEffect = value["hoverEffect"];
   return {
     alignment:
       alignment === "center" || alignment === "right" ? alignment : "left",
-    cardType: cardType === "link" || cardType === "image" ? cardType : "text",
     columns: columns === 1 || columns === 2 ? columns : 3,
+    display: display === "list" ? display : "card",
     hoverEffect:
       hoverEffect === "outline" || hoverEffect === "none"
         ? hoverEffect
