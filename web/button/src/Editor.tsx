@@ -1,81 +1,13 @@
-import { useEffect, useState, type CSSProperties } from 'react'
-import { events, router, view } from '@pc-nexus/bridge'
-import { DEFAULT_BUTTON, ICONFONT_ICONS, iconfontUrl, safeHref, TEMPLATES, type ButtonConfig, type ButtonShape, type ButtonSize, type ButtonShadow } from './button-catalog'
-import './style.css'
-
-type EntryData = { config?: Partial<ButtonConfig>; entry?: { mode?: 'view' | 'edit' } }
-type ConfigChanged = { config?: Partial<ButtonConfig> }
-const CONFIG_CHANGED = 'NEXUS_EXTENSION_DATA_CONFIG_CHANGED'
-
-function fullConfig(value?: Partial<ButtonConfig>): ButtonConfig {
-  return { ...DEFAULT_BUTTON, ...value }
-}
+import { useState } from 'react'
+import { view } from '@pc-nexus/bridge'
+import { ButtonSurface } from './ButtonSurface'
+import { ICONFONT_ICONS, iconfontUrl, safeHref, safeIconUrl, TEMPLATES, type ButtonConfig, type ButtonShape, type ButtonSize, type ButtonShadow } from '../../../plugins/button/config'
 
 function safeColor(value: string, fallback: string): string {
   return /^#[0-9a-f]{6}$/i.test(value) ? value : fallback
 }
 
-function safeIconUrl(value: string): string | undefined {
-  try {
-    const url = new URL(value)
-    return url.protocol === 'https:' ? url.href : undefined
-  } catch { return undefined }
-}
-
-function ButtonSurface({ config, navigate = false }: { config: ButtonConfig; navigate?: boolean }) {
-  const colors = {
-    '--button-bg': config.appearance === 'outline' ? '#ffffff' : safeColor(config.backgroundColor, '#2d7ff9'),
-    '--button-fg': safeColor(config.textColor, '#ffffff'),
-    '--button-border': safeColor(config.outlineColor, '#2d7ff9'),
-    '--button-hover-bg': safeColor(config.hoverBackgroundColor, config.backgroundColor),
-    '--button-hover-fg': safeColor(config.hoverTextColor, '#ffffff'),
-    minWidth: config.shape === 'circle' ? undefined : `${Math.min(800, Math.max(0, config.minWidth || 0))}px`,
-  } as CSSProperties
-  const href = safeHref(config.href)
-  const className = `styled-button shape-${config.shape} size-${config.size} shadow-${config.shadow}`
-  const iconUrl = iconfontUrl(config.iconId) || safeIconUrl(config.iconUrl)
-  const iconStyle = iconUrl ? {
-    backgroundColor: safeColor(config.iconColor, config.textColor),
-    maskImage: `url("${iconUrl}")`,
-    WebkitMaskImage: `url("${iconUrl}")`,
-  } as CSSProperties : undefined
-  const icon = iconUrl
-    ? <span className="button-icon image-icon" style={iconStyle} aria-hidden="true" />
-    : config.iconText ? <span className="button-icon text-icon" style={{ color: safeColor(config.iconColor, config.textColor) }} aria-hidden="true">{config.iconText}</span> : null
-  const content = <>{icon}<span className="button-label">{config.label || '按钮'}</span></>
-  if (navigate && href) {
-    return <a className={className} style={colors} href={href} aria-label={config.label || '按钮'} onClick={(event) => {
-      event.preventDefault()
-      void (config.openNewTab ? router.open(href) : router.navigate(href))
-    }}>{content}</a>
-  }
-  return <span className={className} style={colors} aria-label={config.label || '按钮'}>{content}</span>
-}
-
-export default function App() {
-  const [mode, setMode] = useState<'view' | 'edit' | null>(null)
-  const [config, setConfig] = useState<ButtonConfig>(fullConfig())
-  useEffect(() => {
-    let active = true
-    let unsubscribe: (() => void) | undefined
-    void view.getContext<EntryData>().then((context) => {
-      if (!active) return
-      setMode(context.extension.data.entry?.mode ?? 'view')
-      setConfig(fullConfig(context.extension.data.config))
-      if (context.extension.data.entry?.mode !== 'edit') {
-        void events.on<ConfigChanged>(CONFIG_CHANGED, (payload) => {
-          if (active) setConfig(fullConfig(payload?.config))
-        }).then((subscription) => { unsubscribe = () => subscription.unsubscribe() })
-      }
-    }).catch(() => { if (active) setMode('edit') })
-    return () => { active = false; unsubscribe?.() }
-  }, [])
-  if (mode === null) return <div className="loading">正在加载按钮…</div>
-  if (mode === 'view') return <div className="viewer"><ButtonSurface config={config} navigate /></div>
-  return <Editor initialConfig={config} />
-}
-
-function Editor({ initialConfig }: { initialConfig: ButtonConfig }) {
+export function Editor({ initialConfig }: { initialConfig: ButtonConfig }) {
   const [config, setConfig] = useState(initialConfig)
   const [tab, setTab] = useState<'templates' | 'configuration'>('templates')
   const [designTab, setDesignTab] = useState<'default' | 'hover'>('default')

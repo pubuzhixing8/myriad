@@ -9,8 +9,6 @@ extensions:
     icon: resource:button/myriad.svg
     resource: button
     layout: inline
-    resolver:
-      function: resolver
     behavior: modal
     edit:
       title: Myriad - Button
@@ -25,8 +23,6 @@ extensions:
     icon: resource:button/myriad.svg
     resource: background
     layout: bodied
-    resolver:
-      function: resolver
     behavior: modal
     edit:
       title: Myriad - Background
@@ -35,14 +31,11 @@ extensions:
       viewport:
         size: large
       openOnInsert: true
-functions:
-  - key: resolver
-    handler: index.resolver
 resources:
   - key: button
-    path: web/main/dist
+    path: web/button/dist
   - key: background
-    path: web/native/main.tsx
+    path: plugins/background/native-ui/main.tsx
     render: native
 permissions:
   scopes: []

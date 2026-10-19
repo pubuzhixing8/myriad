@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { view } from "@pc-nexus/bridge";
 import { NxBlockContent, NxBox, NxButton, NxInput, NxText, useAppContext, useConfig } from "@pc-nexus/react";
-import { BACKGROUNDS, CATEGORIES, getBackground, type BackgroundConfig, type VerticalAlign } from "./catalog";
+import { BACKGROUNDS, CATEGORIES, getBackground, type BackgroundConfig, type VerticalAlign } from "../config";
 import { NxImage } from "./image";
 
 interface BlockContext {
