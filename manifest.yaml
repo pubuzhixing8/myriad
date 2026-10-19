@@ -3,16 +3,34 @@ app:
   version: 1.0.0
   id: 98d7facb-deef-49c7-a1ad-9bc9acd9fc6e
 extensions:
+  - key: myriad-button
+    target: pcm:wiki:document:block
+    title: Myriad - Button
+    icon: resource:button/myriad.svg
+    resource: button
+    layout: inline
+    resolver:
+      function: resolver
+    behavior: modal
+    edit:
+      title: Myriad - Button
+      icon: resource:button/myriad.svg
+      resource: button
+      viewport:
+        size: large
+      openOnInsert: true
   - key: myriad-background
     target: pcm:wiki:document:block
-    title: 背景图
+    title: Myriad - Background
+    icon: resource:button/myriad.svg
     resource: background
     layout: bodied
     resolver:
       function: resolver
     behavior: modal
     edit:
-      title: 设置背景图
+      title: Myriad - Background
+      icon: resource:button/myriad.svg
       resource: background
       viewport:
         size: large
@@ -35,6 +53,8 @@ functions:
   - key: resolver
     handler: index.resolver
 resources:
+  - key: button
+    path: web/main/dist
   - key: background
     path: web/native/main.tsx
     render: native
@@ -47,3 +67,4 @@ permissions:
   external:
     images:
       - https://images.unsplash.com
+      - https://at.alicdn.com

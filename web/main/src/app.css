@@ -47,11 +47,11 @@ button { cursor: pointer; }
 }
 
 .brand-row h1 { margin: 0; color: #292929; font-size: 22px; line-height: 1.3; }
-.brand-mark { position: relative; display: block; width: 42px; height: 34px; flex: 0 0 42px; }
-.brand-mark i { position: absolute; top: 3px; width: 15px; height: 29px; border-radius: 9px 9px 5px 5px; transform: rotate(-25deg); }
-.brand-mark i:nth-child(1) { left: 3px; background: linear-gradient(180deg, #8259ff, #c30082); }
-.brand-mark i:nth-child(2) { left: 14px; background: linear-gradient(180deg, #646cff, #6052ec); }
-.brand-mark i:nth-child(3) { left: 25px; background: linear-gradient(180deg, #21b6e8, #087fdc); }
+.cards-brand-mark { position: relative; display: block; width: 42px; height: 34px; flex: 0 0 42px; }
+.cards-brand-mark i { position: absolute; top: 3px; width: 15px; height: 29px; border-radius: 9px 9px 5px 5px; transform: rotate(-25deg); }
+.cards-brand-mark i:nth-child(1) { left: 3px; background: linear-gradient(180deg, #8259ff, #c30082); }
+.cards-brand-mark i:nth-child(2) { left: 14px; background: linear-gradient(180deg, #646cff, #6052ec); }
+.cards-brand-mark i:nth-child(3) { left: 25px; background: linear-gradient(180deg, #21b6e8, #087fdc); }
 
 .tabs {
   display: flex;

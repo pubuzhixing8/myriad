@@ -1,21 +1,27 @@
 # myriad
 
-PingCode Wiki `document:block` extensions built with Nexus.
+PingCode Wiki `document:block` extensions built with Nexus:
+
+- **Myriad - Background:** Native UI block with an editable Wiki body, Unsplash backgrounds, transparency, and vertical alignment controls.
+- **Myriad - Button:** Custom UI block with templates, configurable shape, size, link, colors, hover styles, shadows, and Iconfont icons.
+- **Myriad - Cards:** Custom UI block that loads Wiki pages dynamically and presents selected pages as configurable cards.
+
+The Background and Button extensions use `web/main/public/myriad.svg` for their Wiki slash-menu icon. Button and Cards share the `web/main/dist` Custom UI bundle; the entry component dispatches by extension key.
 
 ## Myriad - Cards
 
-`myriad-cards` is a Custom UI block for selecting Wiki pages and presenting them as visual cards. In edit mode it:
+In edit mode, Cards:
 
-- loads the current Wiki space's pages through the `listWikiPages` resolver;
+- loads pages from the current Wiki space through the `listWikiPages` resolver;
 - supports paging, filtering the current result page, refresh, and selecting up to 12 pages;
 - previews alignment, card type, column count, and hover style changes immediately;
-- saves the selected page metadata in block config and refreshes it by page ID in view mode.
+- saves selected page metadata and refreshes it by page ID in view mode.
 
-Open `http://127.0.0.1:3100/` during local development for the edit preview, or add `?mode=view` for the saved block view. Standalone mode uses local sample data; Nexus-hosted mode uses the Wiki API.
+Open `http://127.0.0.1:3100/` during local development for the Cards editor, add `?mode=view` for its saved-block view, or use `?extension=myriad-button` for the Button editor. Standalone Cards mode uses sample data; Nexus-hosted mode uses the Wiki API.
 
-## Background block
+## Runtime dependency
 
-The existing `myriad-background` block remains available as a Native UI extension. Its `NxImage` component depends on the corresponding Nexus runtime mapping.
+`NxImage` is implemented in the Nexus runtime. This application declares its tag locally until a version of `@pc-nexus/react` containing it is published. The target PingCode host must include its Native UI mapping for the Background block. Button and Cards run in Custom UI and need no runtime changes.
 
 ## Local checks
 
