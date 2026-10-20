@@ -2,7 +2,7 @@
 
 PingCode Wiki `document:block` extensions built with Nexus:
 
-- **Myriad - Background:** Native UI block with an editable Wiki body, Unsplash backgrounds, transparency, and vertical alignment controls.
+- **Myriad - Background:** Native UI block with an editable Wiki body and a fullscreen Custom UI editor. Choose a theme background color or a Pixabay image, with Chinese and English labels and a live preview.
 - **Myriad - Button:** Custom UI block with templates, configurable shape, size, link, colors, hover styles, shadows, and Iconfont icons.
 - **Myriad - Pages:** Custom UI block that loads Wiki pages dynamically and presents selected pages as configurable page cards.
 
@@ -18,6 +18,36 @@ In edit mode, Pages:
 - saves selected page metadata and refreshes it by page ID in view mode.
 
 Open `http://127.0.0.1:3100/` during local development for the Pages editor, or add `?mode=view` for its saved-block view. Standalone Pages mode uses sample data; Nexus-hosted mode uses the Wiki API. Run the Pages dev server from `web/pages`. The Button dev server uses port 3101.
+
+## Background 本地调试
+
+使用 Node.js 24 或更新版本。只查看编辑页面时，在项目根目录运行：
+
+```bash
+npm run dev:background
+```
+
+然后打开 `http://127.0.0.1:3102/`。页面会使用示例配置；可用 `?locale=zh-CN` 或 `?locale=en-US` 预览语言效果。正式环境通过 Nexus i18n 读取 PingCode 用户的语言设置，不显示语言切换控件。保存需要在 PingCode 中调试。
+
+图片选择页通过 Pixabay API 展示默认图片并搜索全图库，支持颜色、图片方向和分页。搜索由 Nexus Resolver 在服务端执行，不会把 API Key 暴露给浏览器。先在 [Pixabay API 页面](https://pixabay.com/api/docs/)获取密钥，再在项目目录的终端运行：
+
+```bash
+nexus variables set --encrypt -e development PIXABAY_API_KEY
+```
+
+命令会提示输入密钥；不要将密钥写入代码、提交到 Git 或贴到聊天中。配置后重新部署 development，并在 PingCode 中打开编辑弹框测试搜索。直接访问本地 Vite 页面只能预览 UI，不能调用 Nexus Resolver。当前版本直接保存 Pixabay 返回的图片地址，属于临时方案；Pixabay API 不允许长期引用其图片地址，后续需要将选中的图片存入自有存储。
+
+本地 Nexus 调试会读取 development 环境中已设置的加密变量。项目的 `npm run debug:nexus` 使用修正了变量覆盖问题的 Nexus CLI 版本；无需在本地文件或命令行中再次写入 Key。
+
+要在已部署并安装到测试站点的 development 应用里调试，先在本地 `nexus.json` 的 `serve.resources` 中配置 `background-editor` 的端口为 `3102`，然后运行：
+
+```bash
+npm run debug
+```
+
+这个命令会同时启动 Background 前端和 Nexus 调试隧道；按 Ctrl+C 会一起停止。首次启动 Nexus 调试可能需要在终端完成测试账号绑定。
+
+`nexus.json` 是个人本地配置，不提交到 Git。改动 `manifest.yaml` 后仍需重新部署；新增 Pixabay 后端请求权限后，还需重新分发并由企业管理员确认权限。首次调试还需完成分发、企业管理员安装和测试账号绑定。
 
 ## Runtime dependency
 
@@ -39,6 +69,6 @@ npm run build
 nexus lint
 ```
 
-Background uses the Native UI entry `plugins/background/native-ui/main.tsx`. Button and Pages use `web/button/dist` and `web/pages/dist` respectively.
+Background uses the Native UI entry `plugins/background/native-ui/main.tsx` for its saved block and `web/background/dist` for configuration. Button and Pages use `web/button/dist` and `web/pages/dist` respectively.
 
 `nexus.json` and `nexus-bindings.json` are local platform configuration and are intentionally excluded from Git.

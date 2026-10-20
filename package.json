@@ -4,13 +4,16 @@
   "type": "module",
   "main": "index.js",
   "scripts": {
+    "debug": "node scripts/debug.mjs",
+    "dev:background": "npm run dev --prefix web/background",
+    "debug:nexus": "npm exec --yes --package=@pc-nexus/cli@1.0.0-next.0 -- nexus serve -e development",
     "build-native": "tsc --noEmit -p plugins/background/native-ui/tsconfig.json",
-    "build-custom-ui": "npm run build --prefix web/button && npm run build --prefix web/pages",
+    "build-custom-ui": "npm run build --prefix web/button && npm run build --prefix web/pages && npm run build --prefix web/background",
     "build-web": "npm run build-native && npm run build-custom-ui",
     "build": "tsc && npm run build-web"
   },
   "devDependencies": {
-    "@pc-nexus/react-builder": "^0.8.0",
+    "@pc-nexus/react-builder": "^1.0.0-next.0",
     "@types/node": "^24.10.1",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
