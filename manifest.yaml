@@ -48,6 +48,23 @@ extensions:
       viewport:
         size: xlarge
       openOnInsert: true
+  - key: myriad-dynamic-content
+    target: pcm:wiki:document:block
+    title: Myriad - Dynamic Content
+    icon: resource:button/myriad.svg
+    resource: dynamic-content
+    layout: bodied
+    resolver:
+      function: resolver
+    behavior: modal
+    emitReadyEvent: true
+    edit:
+      title: Myriad - Dynamic Content
+      icon: resource:button/myriad.svg
+      resource: dynamic-content
+      viewport:
+        size: xlarge
+      openOnInsert: true
 functions:
   - key: resolver
     handler: index.resolver
@@ -59,6 +76,8 @@ resources:
     render: native
   - key: cards
     path: web/pages/dist
+  - key: dynamic-content
+    path: web/dynamic-content/dist
 permissions:
   scopes:
     - pcp:read:app-user-token
