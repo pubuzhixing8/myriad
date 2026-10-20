@@ -59,6 +59,23 @@ extensions:
       viewport:
         size: xlarge
       openOnInsert: true
+  - key: myriad-card-grid
+    target: pcm:wiki:document:block
+    title: Myriad - Cards
+    icon: resource:button/myriad.svg
+    resource: card-grid
+    layout: block
+    resolver:
+      function: background-resolver
+    behavior: modal
+    emitReadyEvent: true
+    edit:
+      title: Myriad - Cards
+      icon: resource:button/myriad.svg
+      resource: card-grid
+      viewport:
+        size: fullscreen
+      openOnInsert: true
   - key: myriad-dynamic-content
     target: pcm:wiki:document:block
     title: Myriad - Dynamic Content
@@ -91,6 +108,8 @@ resources:
     path: web/background/dist
   - key: cards
     path: web/pages/dist
+  - key: card-grid
+    path: web/cards/dist
   - key: dynamic-content
     path: web/dynamic-content/dist
 permissions:

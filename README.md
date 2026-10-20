@@ -5,6 +5,7 @@ PingCode Wiki `document:block` extensions built with Nexus:
 - **Myriad - Background:** Native UI block with an editable Wiki body and a fullscreen Custom UI editor. Choose a theme background color or a Pixabay image, with Chinese and English labels and a live preview.
 - **Myriad - Button:** Custom UI block with templates, configurable shape, size, link, colors, hover styles, shadows, and Iconfont icons.
 - **Myriad - Pages:** Custom UI block that loads Wiki pages dynamically and presents selected pages as configurable page cards.
+- **Myriad - Cards:** Independent block for up to six manually configured cards, with text, icons or Pixabay images.
 - **Myriad - Dynamic Content:** Custom UI block that lists Wiki spaces or pages matching configurable filters, with pagination.
 
 Background and Button use `web/button/public/myriad.svg` for their Wiki slash-menu icon. The Button editor uses the same logo in its header.
@@ -19,6 +20,10 @@ In edit mode, Pages:
 - saves selected page metadata and refreshes it by page ID in view mode.
 
 Open `http://127.0.0.1:3100/` during local development for the Pages editor, or add `?mode=view` for its saved-block view. Standalone Pages mode uses sample data; Nexus-hosted mode uses the Wiki API. Run the Pages dev server from `web/pages`. The Button dev server uses port 3101.
+
+## Myriad - Cards
+
+Cards is a separate `layout: block` extension; Pages keeps its existing configuration and behavior. The fullscreen Cards editor supports up to six cards, layout and appearance settings, per-card text, icons, links, and Pixabay images. Image search uses the same Nexus resolver and encrypted API key as Background. Run `npm run dev --prefix web/cards` and open `http://127.0.0.1:3104/` to preview the editor locally; add `?mode=view` for the saved-block view. Pixabay search requires a Nexus-hosted session, while default images work in the standalone preview.
 
 ## Myriad - Dynamic Content
 
@@ -75,13 +80,14 @@ Use Node.js 24 or newer:
 npm install
 npm install --prefix web/button
 npm install --prefix web/pages
+npm install --prefix web/cards
 npm install --prefix web/background
 npm install --prefix web/dynamic-content
 npm run build
 nexus lint
 ```
 
-Background uses the Native UI entry `plugins/background/native-ui/main.tsx` for its saved block and `web/background/dist` for configuration. Button and Pages use `web/button/dist` and `web/pages/dist` respectively.
+Background uses the Native UI entry `plugins/background/native-ui/main.tsx` for its saved block and `web/background/dist` for configuration. Button, Pages, and Cards use `web/button/dist`, `web/pages/dist`, and `web/cards/dist` respectively.
 
 ## Alpha and RC deployment
 
