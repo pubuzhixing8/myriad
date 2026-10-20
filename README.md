@@ -5,6 +5,7 @@ PingCode Wiki `document:block` extensions built with Nexus:
 - **Myriad - Background:** Native UI block with an editable Wiki body and a fullscreen Custom UI editor. Choose a theme background color or a Pixabay image, with Chinese and English labels and a live preview.
 - **Myriad - Button:** Custom UI block with templates, configurable shape, size, link, colors, hover styles, shadows, and Iconfont icons.
 - **Myriad - Pages:** Custom UI block that loads Wiki pages dynamically and presents selected pages as configurable page cards.
+- **Myriad - Dynamic Content:** Custom UI block that lists Wiki spaces or pages matching configurable filters, with pagination.
 
 Background and Button use `web/button/public/myriad.svg` for their Wiki slash-menu icon. The Button editor uses the same logo in its header.
 
@@ -18,6 +19,15 @@ In edit mode, Pages:
 - saves selected page metadata and refreshes it by page ID in view mode.
 
 Open `http://127.0.0.1:3100/` during local development for the Pages editor, or add `?mode=view` for its saved-block view. Standalone Pages mode uses sample data; Nexus-hosted mode uses the Wiki API. Run the Pages dev server from `web/pages`. The Button dev server uses port 3101.
+
+## Myriad - Dynamic Content
+
+Inserting the block first asks for a source type, then opens a settings page with filters on the left and a live, paginated result preview on the right. The saved settings are the query: the block renders the filtered result list and pages through it inside the Wiki page.
+
+- **Space:** filter spaces by name keyword, visibility scope (`scope_type`), and archived state. The block lists the matching spaces from `listWikiSpaces` (`GET /v2/wiki/spaces`).
+- **Page:** filter pages by space and, optionally, by a reference page (direct children via `parent_id` or all descendants via `ancestor_id`). The block lists the matching pages from `listWikiPages` (`GET /v2/wiki/pages`).
+
+Display settings choose card/list layout, columns, items per page (also used as page size), sorting, excerpts, and metadata. The left pane holds filters and display settings; the right pane previews exactly what the saved block will render, including pagination. Saved blocks re-run the query in view mode and support previous/next paging; the last saved snapshot stays as a fallback. Open `http://127.0.0.1:3102/` during local development, or add `?mode=view` for its saved-block view.
 
 ## Background 本地调试
 
@@ -65,6 +75,8 @@ Use Node.js 24 or newer:
 npm install
 npm install --prefix web/button
 npm install --prefix web/pages
+npm install --prefix web/background
+npm install --prefix web/dynamic-content
 npm run build
 nexus lint
 ```
