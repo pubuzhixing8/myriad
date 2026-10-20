@@ -4,13 +4,21 @@
   "type": "module",
   "main": "index.js",
   "scripts": {
+    "debug": "node scripts/debug.mjs",
+    "dev:background": "npm run dev --prefix web/background",
+    "debug:nexus": "nexus serve -e development",
+    "deploy:alpha": "node scripts/nexus-platform.mjs use alpha && npm run build-web && nexus deploy --non-interactive --no-verify -e development",
+    "distribute:alpha": "node scripts/nexus-platform.mjs distribute alpha --env development",
+    "deploy:rc": "node scripts/nexus-platform.mjs use rc && npm run build-web && nexus deploy --non-interactive --no-verify -e development",
+    "distribute:rc": "node scripts/nexus-platform.mjs distribute rc --env development",
     "build-native": "tsc --noEmit -p plugins/background/native-ui/tsconfig.json",
-    "build-custom-ui": "npm run build --prefix web/button && npm run build --prefix web/pages && npm run build --prefix web/dynamic-content",
+    "build-custom-ui": "npm run build --prefix web/button && npm run build --prefix web/pages && npm run build --prefix web/background && npm run build --prefix web/dynamic-content",
     "build-web": "npm run build-native && npm run build-custom-ui",
     "build": "tsc && npm run build-web"
   },
   "devDependencies": {
-    "@pc-nexus/react-builder": "^0.8.0",
+    "@pc-nexus/cli": "1.0.0-next.0",
+    "@pc-nexus/react-builder": "1.0.0-next.0",
     "@types/node": "^24.10.1",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",

@@ -1,0 +1,14 @@
+{
+  "$comment": "本应用在各 Nexus 平台上的注册信息。app.id 只在注册它的平台有效。由 nxp 维护。",
+  "appName": "myriad",
+  "bindings": {
+    "rc": {
+      "appId": "8e7c78c9-fa24-42f9-afff-af4996e89683",
+      "site": "fancy-block-hackathon.pingcode.com"
+    },
+    "alpha": {
+      "appId": "8e4e40af-23ea-43cc-98af-1a851af87319",
+      "site": "wiki.alpha.pingcode.live"
+    }
+  }
+}

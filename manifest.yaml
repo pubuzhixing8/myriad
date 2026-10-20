@@ -2,6 +2,14 @@
 app:
   version: 1.0.0
   id: 8e4e40af-23ea-43cc-98af-1a851af87319
+translations:
+  resources:
+    - key: zh-CN
+      path: locales/zh-CN.json
+    - key: en-US
+      path: locales/en-US.json
+  fallback:
+    default: zh-CN
 extensions:
   - key: myriad-button
     target: pcm:wiki:document:block
@@ -24,12 +32,14 @@ extensions:
     resource: background
     layout: bodied
     behavior: modal
+    resolver:
+      function: background-resolver
     edit:
       title: Myriad - Background
       icon: resource:button/myriad.svg
-      resource: background
+      resource: background-editor
       viewport:
-        size: large
+        size: fullscreen
       openOnInsert: true
   - key: myriad-cards
     target: pcm:wiki:document:block
@@ -68,12 +78,16 @@ extensions:
 functions:
   - key: resolver
     handler: index.resolver
+  - key: background-resolver
+    handler: index.backgroundResolver
 resources:
   - key: button
     path: web/button/dist
   - key: background
     path: plugins/background/native-ui/main.tsx
     render: native
+  - key: background-editor
+    path: web/background/dist
   - key: cards
     path: web/pages/dist
   - key: dynamic-content
@@ -84,6 +98,15 @@ permissions:
     - pcp:read:wiki:page
     - pcp:read:wiki:space
   external:
+    fetch:
+      backend:
+        - https://pixabay.com
     images:
-      - https://images.unsplash.com
+      - https://pixabay.com
+      - https://cdn.pixabay.com
       - https://at.alicdn.com
+environment:
+  variables:
+    - key: PIXABAY_API_KEY
+      default: ""
+      description: Pixabay photo search API key
