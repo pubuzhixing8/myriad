@@ -3,7 +3,8 @@
   "appName": "myriad",
   "bindings": {
     "rc": {
-      "appId": "8e7c78c9-fa24-42f9-afff-af4996e89683"
+      "appId": "8e7c78c9-fa24-42f9-afff-af4996e89683",
+      "site": "fancy-block-hackathon.pingcode.com"
     },
     "alpha": {
       "appId": "8e4e40af-23ea-43cc-98af-1a851af87319",
