@@ -10,7 +10,7 @@ import "./style.css";
 
 type EntryData = {
   config?: Partial<ButtonConfig>;
-  entry?: { mode?: "view" | "edit" };
+  entry?: { mode?: "view" | "edit"; isEditing?: boolean };
 };
 type ConfigChanged = { config?: Partial<ButtonConfig> };
 const CONFIG_CHANGED = "NEXUS_EXTENSION_DATA_CONFIG_CHANGED";
@@ -21,6 +21,7 @@ function fullConfig(value?: Partial<ButtonConfig>): ButtonConfig {
 
 export default function App() {
   const [mode, setMode] = useState<"view" | "edit" | null>(null);
+  const [isEditingPage, setIsEditingPage] = useState(false);
   const [config, setConfig] = useState<ButtonConfig>(fullConfig());
   useEffect(() => {
     let active = true;
@@ -30,6 +31,7 @@ export default function App() {
       .then((context) => {
         if (!active) return;
         setMode(context.extension.data.entry?.mode ?? "view");
+        setIsEditingPage(context.extension.data.entry?.isEditing === true);
         setConfig(fullConfig(context.extension.data.config));
         if (context.extension.data.entry?.mode !== "edit") {
           requestAnimationFrame(() => {
@@ -56,7 +58,7 @@ export default function App() {
   if (mode === "view")
     return (
       <span className="viewer" data-iframe-size>
-        <ButtonSurface config={config} navigate />
+        <ButtonSurface config={config} navigate={!isEditingPage} />
       </span>
     );
   return <Editor initialConfig={config} />;
