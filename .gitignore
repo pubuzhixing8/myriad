@@ -2,6 +2,8 @@ node_modules/
 dist/
 web/main/dist/
 web/main/node_modules/
+web/background/dist/
+web/background/node_modules/
 
 *.log
 .DS_Store
