@@ -19,6 +19,8 @@ type Photo = {
   id: string;
   name: string;
   photographer: string;
+  authorUrl: string;
+  avatarUrl: string;
   imageUrl: string;
   thumbnailUrl: string;
   pageUrl: string;
@@ -36,6 +38,7 @@ const DEFAULT_PHOTOS = [
     nameZh: "山间湖泊",
     nameEn: "Mountain lake",
     photographer: "ChiemSeherin",
+    authorId: 1425977,
     path: "2022/06/21/21/56/konigssee-7276585",
     page: "https://pixabay.com/photos/k%C3%B6nigssee-mountains-7276585/",
   },
@@ -44,6 +47,7 @@ const DEFAULT_PHOTOS = [
     nameZh: "高山湖",
     nameEn: "Alpine lake",
     photographer: "suju-foto",
+    authorId: 165106,
     path: "2020/06/24/20/41/truebsee-5337646",
     page: "https://pixabay.com/photos/tr%C3%BCebsee-titlis-switzerland-5337646/",
   },
@@ -52,6 +56,7 @@ const DEFAULT_PHOTOS = [
     nameZh: "海浪",
     nameEn: "Ocean wave",
     photographer: "Kanenori",
+    authorId: 4749850,
     path: "2020/08/19/00/13/sea-5499649",
     page: "https://pixabay.com/photos/sea-wave-splash-big-wave-ocean-5499649/",
   },
@@ -60,6 +65,7 @@ const DEFAULT_PHOTOS = [
     nameZh: "雾中森林",
     nameEn: "Misty forest",
     photographer: "cocoparisienne",
+    authorId: 127419,
     path: "2016/03/15/18/12/forest-1258845",
     page: "https://pixabay.com/photos/forest-trees-fog-moss-forest-floor-1258845/",
   },
@@ -68,6 +74,7 @@ const DEFAULT_PHOTOS = [
     nameZh: "城市日落",
     nameEn: "City sunset",
     photographer: "soultrain",
+    authorId: 7283580,
     path: "2023/08/26/09/11/sunset-8214498",
     page: "https://pixabay.com/photos/sunset-skyscrapers-buildings-city-8214498/",
   },
@@ -76,6 +83,7 @@ const DEFAULT_PHOTOS = [
     nameZh: "花田",
     nameEn: "Flower field",
     photographer: "KIMDAEJEUNG",
+    authorId: 7703165,
     path: "2023/06/04/00/34/flowers-8038712",
     page: "https://pixabay.com/photos/flowers-geumgye-guk-field-wind-8038712/",
   },
@@ -169,6 +177,8 @@ export default function App() {
         id: `pixabay:${photo.id}`,
         name: locale === "zh-CN" ? photo.nameZh : photo.nameEn,
         photographer: photo.photographer,
+        authorUrl: `https://pixabay.com/users/${encodeURIComponent(photo.photographer.toLowerCase())}-${photo.authorId}/`,
+        avatarUrl: "",
         imageUrl: `https://cdn.pixabay.com/photo/${photo.path}_1280.jpg`,
         thumbnailUrl: `https://cdn.pixabay.com/photo/${photo.path}_640.jpg`,
         pageUrl: photo.page,
@@ -616,34 +626,57 @@ export default function App() {
             {visiblePhotos.length > 0 && (
               <div className="photo-grid">
                 {visiblePhotos.map((photo) => (
-                  <button
+                  <div
                     key={photo.id}
                     className={
                       config.imageId === photo.id
                         ? "photo-card selected"
                         : "photo-card"
                     }
-                    onClick={() => {
-                      setConfig((current) => ({
-                        ...current,
-                        backgroundType: "image",
-                        imageId: photo.id,
-                        imageUrl: photo.imageUrl,
-                        imageName: photo.name,
-                        imagePage: photo.pageUrl,
-                        imagePhotographer: photo.photographer,
-                      }));
-                      setPickerOpen(false);
-                    }}
                   >
-                    <img
-                      src={photo.thumbnailUrl}
-                      alt={photo.name}
-                      loading="lazy"
-                    />
-                    <span>{photo.name}</span>
-                    <small>{photo.photographer}</small>
-                  </button>
+                    <button
+                      type="button"
+                      className="photo-select"
+                      aria-label={photo.name}
+                      onClick={() => {
+                        setConfig((current) => ({
+                          ...current,
+                          backgroundType: "image",
+                          imageId: photo.id,
+                          imageUrl: photo.imageUrl,
+                          imageName: photo.name,
+                          imagePage: photo.pageUrl,
+                          imagePhotographer: photo.photographer,
+                        }));
+                        setPickerOpen(false);
+                      }}
+                    >
+                      <img
+                        src={photo.thumbnailUrl}
+                        alt=""
+                        loading="lazy"
+                      />
+                    </button>
+                    {photo.photographer && (
+                      <a
+                        className="photo-author"
+                        href={photo.authorUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <span className="photo-avatar">
+                          {photo.avatarUrl ? (
+                            <img src={photo.avatarUrl} alt="" loading="lazy" />
+                          ) : (
+                            photo.photographer.charAt(0).toUpperCase()
+                          )}
+                        </span>
+                        <span className="photo-author-name">
+                          {photo.photographer}
+                        </span>
+                      </a>
+                    )}
+                  </div>
                 ))}
               </div>
             )}
