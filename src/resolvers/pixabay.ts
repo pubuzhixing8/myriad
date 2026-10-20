@@ -13,6 +13,8 @@ interface PixabayPhoto {
   id: number;
   tags: string;
   user: string;
+  user_id: number;
+  userImageURL: string;
   pageURL: string;
   webformatURL: string;
   largeImageURL: string;
@@ -28,6 +30,8 @@ interface PhotoResult {
   id: string;
   name: string;
   photographer: string;
+  authorUrl: string;
+  avatarUrl: string;
   imageUrl: string;
   thumbnailUrl: string;
   pageUrl: string;
@@ -150,6 +154,8 @@ backgroundResolver.define<SearchPayload, SearchResult>(
         id: `pixabay:${photo.id}`,
         name: photo.tags || `Photo ${photo.id}`,
         photographer: photo.user,
+        authorUrl: `https://pixabay.com/users/${encodeURIComponent(photo.user.toLowerCase())}-${photo.user_id}/`,
+        avatarUrl: photo.userImageURL || "",
         imageUrl: cdnPhoto
           ? `${cdnPhoto[1]}_1280.${cdnPhoto[2]}`
           : photo.largeImageURL || photo.webformatURL,
