@@ -14,4 +14,3 @@ yarn-error.log*
 
 # 本地当前指向哪个 Nexus 平台，属于开发者个人状态
 nexus.json
-nexus-bindings.json
