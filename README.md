@@ -78,8 +78,8 @@ The application has separate Nexus registrations for Alpha and RC. The tracked `
 | Target | Deploy development | Distribute development |
 | --- | --- | --- |
 | Alpha | `npm run deploy:alpha` | `npm run distribute:alpha` |
-| RC | `npm run deploy:rc` | `npm run distribute:rc -- --site <rc-site-domain>` |
+| RC | `npm run deploy:rc` | `npm run distribute:rc` |
 
-Run deployment before distribution. Alpha uses `wiki.alpha.pingcode.live`; RC needs its site domain on the first distribution. After a successful RC distribution, `nxp` records the site in `nexus-bindings.json`. To inspect the active platform and bindings, run `../../../playground/nexus-platform/bin/nxp status` (or `$NXP_BIN status`). Distribution still requires an enterprise administrator to install or approve the application in PingCode.
+Run deployment before distribution. Alpha uses `wiki.alpha.pingcode.live`; RC uses `fancy-block-hackathon.pingcode.com`. To inspect the active platform and bindings, run `../../../playground/nexus-platform/bin/nxp status` (or `$NXP_BIN status`). Distribution still requires an enterprise administrator to install or approve the application in PingCode.
 
 Set the encrypted `PIXABAY_API_KEY` separately on each Nexus platform before deploying there. `nexus.json` is personal local configuration and is intentionally excluded from Git.
