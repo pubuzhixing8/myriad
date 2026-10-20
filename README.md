@@ -71,4 +71,15 @@ nexus lint
 
 Background uses the Native UI entry `plugins/background/native-ui/main.tsx` for its saved block and `web/background/dist` for configuration. Button and Pages use `web/button/dist` and `web/pages/dist` respectively.
 
-`nexus.json` and `nexus-bindings.json` are local platform configuration and are intentionally excluded from Git.
+## Alpha and RC deployment
+
+The application has separate Nexus registrations for Alpha and RC. The tracked `nexus-bindings.json` stores their app IDs. The local `nexus.json` selects the active platform and remains excluded from Git. The commands below use the shared `nxp` tool from `../../../playground/nexus-platform/bin/nxp`; set `NXP_BIN` to its absolute path if it lives elsewhere. `nxp` switches the platform and app ID together, then verifies the target before deploying or distributing.
+
+| Target | Deploy development | Distribute development |
+| --- | --- | --- |
+| Alpha | `npm run deploy:alpha` | `npm run distribute:alpha` |
+| RC | `npm run deploy:rc` | `npm run distribute:rc -- --site <rc-site-domain>` |
+
+Run deployment before distribution. Alpha uses `wiki.alpha.pingcode.live`; RC needs its site domain on the first distribution. After a successful RC distribution, `nxp` records the site in `nexus-bindings.json`. To inspect the active platform and bindings, run `../../../playground/nexus-platform/bin/nxp status` (or `$NXP_BIN status`). Distribution still requires an enterprise administrator to install or approve the application in PingCode.
+
+Set the encrypted `PIXABAY_API_KEY` separately on each Nexus platform before deploying there. `nexus.json` is personal local configuration and is intentionally excluded from Git.
