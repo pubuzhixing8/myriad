@@ -18,12 +18,13 @@ extensions:
     resource: button
     layout: inline
     behavior: modal
+    emitReadyEvent: true
     edit:
       title: Myriad - Button
       icon: resource:button/myriad.svg
       resource: button
       viewport:
-        size: large
+        size: max
       openOnInsert: true
   - key: myriad-background
     target: pcm:wiki:document:block

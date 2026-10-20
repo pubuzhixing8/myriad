@@ -1,41 +1,88 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { view } from "@pc-nexus/bridge";
-import { ButtonSurface } from "./ButtonSurface";
 import {
+  darkenColor,
   ICONFONT_ICONS,
-  iconfontUrl,
-  safeHref,
-  safeIconUrl,
   TEMPLATES,
+  iconfontSvg,
+  normalizeButton,
+  safeButtonHref,
+  safeColor,
   type ButtonConfig,
-  type ButtonShape,
-  type ButtonSize,
-  type ButtonShadow,
 } from "../../../plugins/button/config";
+import { ButtonSurface } from "./ButtonSurface";
 
-function safeColor(value: string, fallback: string): string {
-  return /^#[0-9a-f]{6}$/i.test(value) ? value : fallback;
+const ICON_GROUPS = [
+  {
+    name: "常用",
+    ids: [
+      "none",
+      "arrowright",
+      "check",
+      "link",
+      "home",
+      "star",
+      "heart",
+      "play",
+      "download",
+      "upload",
+      "setting",
+    ],
+  },
+  {
+    name: "办公",
+    ids: ["file", "pdf", "word", "excel", "ppt", "calendar", "email"],
+  },
+  {
+    name: "软件开发",
+    ids: ["code", "terminal", "database", "github", "gitlab", "figma"],
+  },
+  {
+    name: "社交媒体",
+    ids: ["wechat", "sina", "linkedin", "youtube", "bilibili"],
+  },
+];
+const PALETTE = [
+  "#2b6cf0",
+  "#6a5df6",
+  "#12a06a",
+  "#ec8b17",
+  "#d93843",
+  "#222b3b",
+  "#ffffff",
+];
+
+function templateConfig(config: Partial<ButtonConfig>): ButtonConfig {
+  return normalizeButton({
+    ...config,
+    ...(config.backgroundColor
+      ? { hoverBackgroundColor: darkenColor(config.backgroundColor) }
+      : {}),
+  });
 }
 
 export function Editor({ initialConfig }: { initialConfig: ButtonConfig }) {
   const [config, setConfig] = useState(initialConfig);
   const [tab, setTab] = useState<"templates" | "configuration">("templates");
   const [designTab, setDesignTab] = useState<"default" | "hover">("default");
+  const [linkOpen, setLinkOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+
   function change<K extends keyof ButtonConfig>(
     key: K,
     value: ButtonConfig[K],
   ) {
     setConfig((current) => ({ ...current, [key]: value }));
   }
+
   async function save() {
-    if (config.href.trim() && !safeHref(config.href)) {
-      setError("请输入 http:// 或 https:// 链接");
-      return;
-    }
-    if (config.iconUrl.trim() && !safeIconUrl(config.iconUrl)) {
-      setError("图标地址必须为 HTTPS URL");
+    if (config.href.trim() && !safeButtonHref(config)) {
+      setError(
+        config.linkType === "email"
+          ? "请输入有效的邮箱地址"
+          : "请输入 http:// 或 https:// 链接",
+      );
       return;
     }
     setSaving(true);
@@ -48,46 +95,29 @@ export function Editor({ initialConfig }: { initialConfig: ButtonConfig }) {
       setSaving(false);
     }
   }
+
   return (
     <main className="editor">
       <aside className="settings">
-        <header className="settings-header">
-          <img
-            className="brand-mark"
-            src={`${import.meta.env.BASE_URL}myriad.svg`}
-            alt="Myriad"
-          />
-          <div>
-            <strong>Myriad - Button</strong>
-            <small>创建可定制按钮</small>
-          </div>
-        </header>
-        <div className="top-tabs" role="tablist" aria-label="按钮设置">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={tab === "templates"}
-            className={tab === "templates" ? "active" : ""}
-            onClick={() => setTab("templates")}
-          >
-            Templates 模板
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={tab === "configuration"}
-            className={tab === "configuration" ? "active" : ""}
+        <nav className="top-tabs" role="tablist" aria-label="按钮设置">
+          <Tab active={tab === "templates"} onClick={() => setTab("templates")}>
+            模板
+          </Tab>
+          <Tab
+            active={tab === "configuration"}
             onClick={() => setTab("configuration")}
           >
-            Configuration 配置
-          </button>
-        </div>
+            配置
+          </Tab>
+        </nav>
         <div className="settings-scroll">
           {tab === "templates" ? (
-            <section className="template-list">
-              {["媒体", "通用"].map((group) => (
-                <div key={group}>
-                  <h2>{group}按钮</h2>
+            <div className="template-list">
+              {Array.from(
+                new Set(TEMPLATES.map((template) => template.group)),
+              ).map((group) => (
+                <section key={group}>
+                  <h2>{group}</h2>
                   <div className="template-grid">
                     {TEMPLATES.filter(
                       (template) => template.group === group,
@@ -97,303 +127,367 @@ export function Editor({ initialConfig }: { initialConfig: ButtonConfig }) {
                         className="template-card"
                         key={template.id}
                         onClick={() => {
-                          setConfig({ ...template.config });
+                          setConfig(templateConfig(template.config));
                           setTab("configuration");
                         }}
                       >
-                        <ButtonSurface config={template.config} />
-                        <span>{template.name}</span>
+                        <ButtonSurface
+                          config={templateConfig(template.config)}
+                        />
+                        <span className="template-name">{template.name}</span>
                       </button>
                     ))}
                   </div>
-                </div>
+                </section>
               ))}
-            </section>
+            </div>
           ) : (
             <div className="config-panel">
-              <h2>General</h2>
-              <Field label="Shape 形状">
+              <h2>常规</h2>
+              <Field label="形状">
                 <Choices
+                  className="shape-choices"
                   value={config.shape}
                   options={[
-                    ["rectangle", "方形"],
+                    ["square", "方形"],
                     ["rounded", "圆角"],
                     ["pill", "胶囊"],
+                    ["diamond", "菱形"],
+                    ["tag", "标签"],
                     ["circle", "圆形"],
-                    ["slanted", "斜切"],
                   ]}
-                  onChange={(value) => change("shape", value as ButtonShape)}
+                  onChange={(value) => {
+                    change("shape", value as ButtonConfig["shape"]);
+                    if (value === "circle" && config.iconId === "none") {
+                      change("iconId", "arrowright");
+                    }
+                  }}
                 />
               </Field>
-              <Field label="Label 文字">
+              <Field label="类型">
+                <Choices
+                  value={config.appearance}
+                  options={[
+                    ["fill", "实心"],
+                    ["outline", "描边"],
+                    ["ghost", "文字"],
+                  ]}
+                  onChange={(value) => {
+                    const appearance = value as ButtonConfig["appearance"];
+                    setConfig((current) => ({
+                      ...current,
+                      appearance,
+                      backgroundEnabled: appearance === "fill",
+                      textColorEnabled: appearance === "fill",
+                    }));
+                  }}
+                />
+              </Field>
+              <label className="toggle-row">
+                <span>显示文字</span>
                 <input
-                  value={config.label}
-                  onChange={(e) => change("label", e.target.value)}
-                  placeholder="按钮文字"
+                  type="checkbox"
+                  checked={config.showLabel}
+                  onChange={(event) => {
+                    change("showLabel", event.target.checked);
+                    if (!event.target.checked && config.iconId === "none")
+                      change("iconId", "arrowright");
+                  }}
                 />
-              </Field>
-              <Field label="Size 尺寸">
+              </label>
+              <Field label="尺寸">
                 <Choices
                   value={config.size}
                   options={[
-                    ["small", "Small"],
-                    ["medium", "Medium"],
-                    ["large", "Large"],
+                    ["small", "小"],
+                    ["medium", "中"],
+                    ["large", "大"],
                   ]}
-                  onChange={(value) => change("size", value as ButtonSize)}
+                  onChange={(value) =>
+                    change("size", value as ButtonConfig["size"])
+                  }
                 />
               </Field>
-              <Field label={`Minimum Width 最小宽度 · ${config.minWidth}px`}>
-                <div className="number-slider">
-                  <input
-                    type="number"
-                    min="0"
-                    max="800"
-                    value={config.minWidth}
-                    onChange={(e) =>
-                      change(
-                        "minWidth",
-                        Math.min(800, Math.max(0, Number(e.target.value) || 0)),
-                      )
-                    }
-                  />
-                  <input
-                    type="range"
-                    min="0"
-                    max="800"
-                    value={config.minWidth}
-                    onChange={(e) => change("minWidth", Number(e.target.value))}
-                  />
-                </div>
-              </Field>
-              <Field label="Link & Actions 链接">
-                <input
-                  type="url"
-                  value={config.href}
-                  onChange={(e) => change("href", e.target.value)}
-                  placeholder="https://example.com"
-                />
-              </Field>
-              <label className="check-row">
-                <input
-                  type="checkbox"
-                  checked={config.openNewTab}
-                  onChange={(e) => change("openNewTab", e.target.checked)}
-                />{" "}
-                在新标签页打开
-              </label>
-              <h2>Design</h2>
-              <div className="sub-tabs" role="tablist" aria-label="设计状态">
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={designTab === "default"}
-                  className={designTab === "default" ? "active" : ""}
-                  onClick={() => setDesignTab("default")}
-                >
-                  Default
-                </button>
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={designTab === "hover"}
-                  className={designTab === "hover" ? "active" : ""}
-                  onClick={() => setDesignTab("hover")}
-                >
-                  Hover
-                </button>
-              </div>
-              {designTab === "default" ? (
-                <>
-                  <Field label="Appearance 填充方式">
-                    <Choices
-                      value={config.appearance}
-                      options={[
-                        ["fill", "实心"],
-                        ["outline", "描边"],
-                      ]}
-                      onChange={(value) =>
+              {config.shape === "circle" ? (
+                <p className="shape-hint">圆形按钮使用与高度相同的宽度</p>
+              ) : (
+                <Field label="最小宽度">
+                  <div className="range-row">
+                    <input
+                      type="range"
+                      min="0"
+                      max="320"
+                      value={config.minWidth}
+                      onChange={(event) =>
+                        change("minWidth", Number(event.target.value))
+                      }
+                    />
+                    <input
+                      type="number"
+                      min="0"
+                      max="320"
+                      value={config.minWidth}
+                      onChange={(event) =>
                         change(
-                          "appearance",
-                          value as ButtonConfig["appearance"],
+                          "minWidth",
+                          Math.min(
+                            320,
+                            Math.max(0, Number(event.target.value) || 0),
+                          ),
                         )
                       }
                     />
-                  </Field>
-                  <ColorField
-                    label="Background Color 背景颜色"
+                    <span>px</span>
+                  </div>
+                </Field>
+              )}
+              <h2>设计</h2>
+              <div className="sub-tabs" role="tablist" aria-label="按钮状态">
+                <Tab
+                  active={designTab === "default"}
+                  onClick={() => setDesignTab("default")}
+                >
+                  默认
+                </Tab>
+                <Tab
+                  active={designTab === "hover"}
+                  onClick={() => setDesignTab("hover")}
+                >
+                  悬停
+                </Tab>
+              </div>
+              {designTab === "default" ? (
+                <>
+                  <ColorRow
+                    label="背景颜色"
+                    enabled={config.backgroundEnabled}
                     value={config.backgroundColor}
+                    onEnabled={(value) => change("backgroundEnabled", value)}
                     onChange={(value) => change("backgroundColor", value)}
                   />
-                  <ColorField
-                    label="Text Color 文字颜色"
+                  <ColorRow
+                    label="文字颜色"
+                    enabled={config.textColorEnabled}
                     value={config.textColor}
+                    onEnabled={(value) => change("textColorEnabled", value)}
                     onChange={(value) => change("textColor", value)}
                   />
-                  <ColorField
-                    label="Outline Color 描边颜色"
-                    value={config.outlineColor}
-                    onChange={(value) => change("outlineColor", value)}
-                  />
-                  <Field label="Shadow 阴影">
-                    <Choices
-                      value={config.shadow}
-                      options={[
-                        ["none", "无"],
-                        ["soft", "柔和"],
-                        ["grounded", "悬浮"],
-                      ]}
-                      onChange={(value) =>
-                        change("shadow", value as ButtonShadow)
-                      }
+                  {config.appearance === "outline" && (
+                    <ColorRow
+                      label="描边颜色"
+                      enabled={config.outlineEnabled}
+                      value={config.outlineColor}
+                      onEnabled={(value) => change("outlineEnabled", value)}
+                      onChange={(value) => change("outlineColor", value)}
                     />
-                  </Field>
+                  )}
                 </>
               ) : (
                 <>
-                  <ColorField
-                    label="Hover Background 悬停背景"
+                  <ColorRow
+                    label="背景颜色"
+                    enabled={config.hoverBackgroundEnabled}
                     value={config.hoverBackgroundColor}
+                    onEnabled={(value) =>
+                      change("hoverBackgroundEnabled", value)
+                    }
                     onChange={(value) => change("hoverBackgroundColor", value)}
                   />
-                  <ColorField
-                    label="Hover Text 悬停文字"
+                  <ColorRow
+                    label="文字颜色"
+                    enabled={config.hoverTextEnabled}
                     value={config.hoverTextColor}
+                    onEnabled={(value) => change("hoverTextEnabled", value)}
                     onChange={(value) => change("hoverTextColor", value)}
                   />
                 </>
               )}
-              <h2>Icon 图标</h2>
-              <Field label="选择 iconfont 图标">
+              <h2>按钮内容</h2>
+              <Field label="文字">
+                <input
+                  value={config.label}
+                  onChange={(event) => change("label", event.target.value)}
+                  placeholder="按钮文字"
+                />
+              </Field>
+              <Field label="图标">
                 <div className="icon-picker">
-                  <button
-                    type="button"
-                    className={
-                      !config.iconId && !config.iconUrl && !config.iconText
-                        ? "selected"
-                        : ""
-                    }
-                    onClick={() =>
-                      setConfig((current) => ({
-                        ...current,
-                        iconId: "",
-                        iconUrl: "",
-                        iconText: "",
-                      }))
-                    }
-                  >
-                    无图标
-                  </button>
-                  {ICONFONT_ICONS.map(([id, name]) => (
-                    <button
-                      type="button"
-                      key={id}
-                      title={name}
-                      aria-label={name}
-                      aria-pressed={config.iconId === id}
-                      className={config.iconId === id ? "selected" : ""}
-                      onClick={() =>
-                        setConfig((current) => ({
-                          ...current,
-                          iconId: id,
-                          iconUrl: "",
-                          iconText: "",
-                        }))
-                      }
-                    >
-                      <span
-                        className="picker-icon"
-                        style={{
-                          maskImage: `url("${iconfontUrl(id)}")`,
-                          WebkitMaskImage: `url("${iconfontUrl(id)}")`,
-                        }}
-                      />
-                      {name}
-                    </button>
+                  {ICON_GROUPS.map((group) => (
+                    <div className="icon-group" key={group.name}>
+                      <span className="icon-group-name">{group.name}</span>
+                      <div className="icon-grid">
+                        {group.ids.map((id) => {
+                          const name =
+                            id === "none"
+                              ? "无"
+                              : ICONFONT_ICONS.find(
+                                  ([key]) => key === id,
+                                )?.[1] || id;
+                          const iconSvg = iconfontSvg(id);
+                          return (
+                            <button
+                              type="button"
+                              key={id}
+                              className={config.iconId === id ? "selected" : ""}
+                              title={name}
+                              aria-label={name}
+                              aria-pressed={config.iconId === id}
+                              disabled={
+                                config.shape === "circle" && id === "none"
+                              }
+                              onClick={() => {
+                                change("iconId", id);
+                                if (id === "none" && !config.showLabel)
+                                  change("showLabel", true);
+                              }}
+                            >
+                              {iconSvg ? (
+                                <span
+                                  className="picker-icon"
+                                  aria-hidden="true"
+                                  dangerouslySetInnerHTML={{ __html: iconSvg }}
+                                />
+                              ) : (
+                                <span className="picker-none">—</span>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
                   ))}
                 </div>
-                <small>图标来自 iconfont；选择后可修改颜色。</small>
               </Field>
-              <ColorField
-                label="Icon Color 图标颜色"
-                value={config.iconColor}
-                onChange={(value) => change("iconColor", value)}
-              />
-              <Field label="自定义 iconfont SVG URL">
-                <input
-                  type="url"
-                  value={config.iconUrl}
-                  onChange={(e) =>
-                    setConfig((current) => ({
-                      ...current,
-                      iconUrl: e.target.value,
-                      iconId: e.target.value ? "" : current.iconId,
-                    }))
-                  }
-                  placeholder="https://at.alicdn.com/...svg"
-                />
-                <small>
-                  粘贴 HTTPS SVG 图片地址；图标会作为单色蒙版显示，支持改色。
-                </small>
-              </Field>
-              <Field label="文字图标（兼容旧配置）">
-                <input
-                  value={config.iconText}
-                  onChange={(e) =>
-                    setConfig((current) => ({
-                      ...current,
-                      iconText: e.target.value,
-                      iconId: e.target.value ? "" : current.iconId,
-                      iconUrl: e.target.value ? "" : current.iconUrl,
-                    }))
-                  }
-                  placeholder="小、哔、↓"
-                />
-              </Field>
+              {config.iconId !== "none" && (
+                <Field label="图标位置">
+                  <Choices
+                    value={config.iconPosition}
+                    options={[
+                      ["left", "左侧"],
+                      ["right", "右侧"],
+                    ]}
+                    onChange={(value) =>
+                      change(
+                        "iconPosition",
+                        value as ButtonConfig["iconPosition"],
+                      )
+                    }
+                  />
+                </Field>
+              )}
+              <button
+                type="button"
+                className="accordion-trigger"
+                aria-expanded={linkOpen}
+                onClick={() => setLinkOpen(!linkOpen)}
+              >
+                <span>链接与操作</span>
+                <span>{linkOpen ? "⌃" : "⌄"}</span>
+              </button>
+              {linkOpen && (
+                <div className="link-fields">
+                  <Field label="链接类型">
+                    <select
+                      value={config.linkType}
+                      onChange={(event) =>
+                        change(
+                          "linkType",
+                          event.target.value as ButtonConfig["linkType"],
+                        )
+                      }
+                    >
+                      <option value="url">外部网址</option>
+                      <option value="page">Wiki 页面</option>
+                      <option value="attachment">附件</option>
+                      <option value="email">电子邮件</option>
+                    </select>
+                  </Field>
+                  <Field
+                    label={
+                      config.linkType === "email" ? "邮箱地址" : "链接地址"
+                    }
+                  >
+                    <input
+                      type={config.linkType === "email" ? "email" : "url"}
+                      value={config.href}
+                      onChange={(event) => change("href", event.target.value)}
+                      placeholder={
+                        config.linkType === "email"
+                          ? "name@example.com"
+                          : "https://example.com"
+                      }
+                    />
+                  </Field>
+                  <label className="toggle-row">
+                    <span>新窗口打开</span>
+                    <input
+                      type="checkbox"
+                      checked={config.openNewTab}
+                      onChange={(event) =>
+                        change("openNewTab", event.target.checked)
+                      }
+                    />
+                  </label>
+                </div>
+              )}
             </div>
           )}
         </div>
       </aside>
       <section className="preview" aria-label="按钮预览">
-        <div className="preview-heading">
-          <strong>实时预览</strong>
-          <span>更改配置后立即更新</span>
-        </div>
         <div className="preview-stage">
-          <ButtonSurface config={config} />
+          <div className="preview-canvas">
+            <ButtonSurface config={config} />
+          </div>
         </div>
-        <footer>
-          <span className="error" role="alert">
-            {error}
-          </span>
-          <button
-            type="button"
-            className="secondary"
-            onClick={() => void view.close()}
-          >
-            取消
-          </button>
-          <button
-            type="button"
-            className="primary"
-            disabled={saving}
-            onClick={() => void save()}
-          >
-            {saving ? "保存中…" : "保存按钮"}
-          </button>
-        </footer>
       </section>
+      <footer className="editor-footer">
+        <span className="error" role="alert">
+          {error}
+        </span>
+        <button
+          type="button"
+          className="secondary"
+          onClick={() => void view.close()}
+        >
+          取消
+        </button>
+        <button
+          type="button"
+          className="primary"
+          disabled={saving}
+          onClick={() => void save()}
+        >
+          {saving ? "保存中…" : "保存"}
+        </button>
+      </footer>
     </main>
   );
 }
 
-function Field({
-  label,
+function Tab({
+  active,
+  onClick,
   children,
 }: {
-  label: string;
-  children: React.ReactNode;
+  active: boolean;
+  onClick: () => void;
+  children: ReactNode;
 }) {
+  return (
+    <button
+      type="button"
+      role="tab"
+      aria-selected={active}
+      className={active ? "active" : ""}
+      onClick={onClick}
+    >
+      {children}
+    </button>
+  );
+}
+
+function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
     <fieldset className="field">
       <legend>{label}</legend>
@@ -401,22 +495,26 @@ function Field({
     </fieldset>
   );
 }
+
 function Choices({
   value,
   options,
   onChange,
+  className = "",
 }: {
   value: string;
   options: [string, string][];
   onChange: (value: string) => void;
+  className?: string;
 }) {
   return (
-    <div className="choices">
+    <div className={`choices ${className}`}>
       {options.map(([key, label]) => (
         <button
-          key={key}
           type="button"
+          key={key}
           className={value === key ? "selected" : ""}
+          aria-pressed={value === key}
           onClick={() => onChange(key)}
         >
           {label}
@@ -425,29 +523,58 @@ function Choices({
     </div>
   );
 }
-function ColorField({
+
+function ColorRow({
   label,
+  enabled,
   value,
+  onEnabled,
   onChange,
 }: {
   label: string;
+  enabled: boolean;
   value: string;
+  onEnabled: (value: boolean) => void;
   onChange: (value: string) => void;
 }) {
   return (
-    <Field label={label}>
-      <div className="color-field">
+    <div className="color-row">
+      <label className="toggle-row">
+        <span>{label}</span>
         <input
-          type="color"
-          value={safeColor(value, "#ffffff")}
-          onChange={(e) => onChange(e.target.value)}
+          type="checkbox"
+          checked={enabled}
+          onChange={(event) => onEnabled(event.target.checked)}
         />
-        <input
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder="#RRGGBB"
-        />
-      </div>
-    </Field>
+      </label>
+      {enabled && (
+        <>
+          <div className="palette">
+            {PALETTE.map((color) => (
+              <button
+                type="button"
+                key={color}
+                className={value.toLowerCase() === color ? "selected" : ""}
+                style={{ backgroundColor: color }}
+                aria-label={color}
+                onClick={() => onChange(color)}
+              />
+            ))}
+          </div>
+          <div className="custom-color">
+            <input
+              type="color"
+              value={safeColor(value, "#ffffff")}
+              onChange={(event) => onChange(event.target.value)}
+            />
+            <input
+              value={value}
+              onChange={(event) => onChange(event.target.value)}
+              aria-label={`${label}色值`}
+            />
+          </div>
+        </>
+      )}
+    </div>
   );
 }
