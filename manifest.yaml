@@ -16,7 +16,7 @@ extensions:
     title: Myriad - Button
     icon: resource:button/myriad.svg
     resource: button
-    layout: inline
+    layout: block
     behavior: modal
     edit:
       title: Myriad - Button

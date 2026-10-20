@@ -73,7 +73,7 @@ Background uses the Native UI entry `plugins/background/native-ui/main.tsx` for 
 
 ## Alpha and RC deployment
 
-The application has separate Nexus registrations for Alpha and RC. The tracked `nexus-bindings.json` stores their app IDs. The local `nexus.json` selects the active platform and remains excluded from Git. The commands below use the shared `nxp` tool from `../../../playground/nexus-platform/bin/nxp`; set `NXP_BIN` to its absolute path if it lives elsewhere. `nxp` switches the platform and app ID together, then verifies the target before deploying or distributing.
+The application has separate Nexus registrations for Alpha and RC. The tracked `nexus-bindings.json` stores their app IDs. The local `nexus.json` selects the active platform and remains excluded from Git. The commands below use the shared `nxp` tool from `../../../playground/nexus-platform/bin/nxp`; set `NXP_BIN` to its absolute path if it lives elsewhere. `nxp` switches the platform and app ID together, then verifies the target before deploying or distributing. Run `npm install` first; the npm commands use the project's pinned Nexus CLI and React builder (`1.0.0-next.0`) on Node.js 24 or newer.
 
 | Target | Deploy development | Distribute development |
 | --- | --- | --- |
