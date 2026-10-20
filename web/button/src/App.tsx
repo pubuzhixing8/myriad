@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { events, view } from "@pc-nexus/bridge";
 import {
-  DEFAULT_BUTTON,
+  normalizeButton,
   type ButtonConfig,
 } from "../../../plugins/button/config";
 import { ButtonSurface } from "./ButtonSurface";
@@ -16,7 +16,7 @@ type ConfigChanged = { config?: Partial<ButtonConfig> };
 const CONFIG_CHANGED = "NEXUS_EXTENSION_DATA_CONFIG_CHANGED";
 
 function fullConfig(value?: Partial<ButtonConfig>): ButtonConfig {
-  return { ...DEFAULT_BUTTON, ...value };
+  return normalizeButton(value);
 }
 
 export default function App() {
@@ -32,6 +32,9 @@ export default function App() {
         setMode(context.extension.data.entry?.mode ?? "view");
         setConfig(fullConfig(context.extension.data.config));
         if (context.extension.data.entry?.mode !== "edit") {
+          requestAnimationFrame(() => {
+            void view.emitReadyEvent().catch(() => undefined);
+          });
           void events
             .on<ConfigChanged>(CONFIG_CHANGED, (payload) => {
               if (active) setConfig(fullConfig(payload?.config));
@@ -52,9 +55,9 @@ export default function App() {
   if (mode === null) return <div className="loading">正在加载按钮…</div>;
   if (mode === "view")
     return (
-      <div className="viewer">
+      <span className="viewer" data-iframe-size>
         <ButtonSurface config={config} navigate />
-      </div>
+      </span>
     );
   return <Editor initialConfig={config} />;
 }
