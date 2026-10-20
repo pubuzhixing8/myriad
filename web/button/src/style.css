@@ -50,7 +50,8 @@ button {
   flex-direction: column;
   min-width: 0;
   min-height: 0;
-  background: #f9fafc;
+  border-right: 1px solid #e4e9f1;
+  background: #f8fafd;
 }
 
 .top-tabs,
@@ -436,6 +437,7 @@ button {
   flex-direction: column;
   min-width: 0;
   min-height: 0;
+  background: #f5f7fb;
 }
 
 .preview-stage {
@@ -454,9 +456,10 @@ button {
   width: min(720px, 100%);
   min-height: 240px;
   padding: 32px;
-  border: 1px solid #edf0f4;
+  border: 1px solid #e2e7ef;
   border-radius: 10px;
-  background: #fbfcfe;
+  background: #ffffff;
+  box-shadow: 0 4px 20px #2634450a;
 }
 
 .editor-footer {
