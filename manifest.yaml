@@ -40,7 +40,7 @@ extensions:
       icon: resource:button/myriad.svg
       resource: background-editor
       viewport:
-        size: fullscreen
+        size: max
       openOnInsert: true
   - key: myriad-card-grid
     target: pcm:wiki:document:block
@@ -57,7 +57,7 @@ extensions:
       icon: resource:button/myriad.svg
       resource: card-grid
       viewport:
-        size: fullscreen
+        size: max
       openOnInsert: true
   - key: myriad-html-iframe
     target: pcm:wiki:document:block
@@ -72,7 +72,7 @@ extensions:
       icon: resource:button/myriad.svg
       resource: embed-html
       viewport:
-        size: fullscreen
+        size: max
       openOnInsert: true
   - key: myriad-dynamic-content
     target: pcm:wiki:document:block
@@ -89,7 +89,7 @@ extensions:
       icon: resource:button/myriad.svg
       resource: dynamic-content
       viewport:
-        size: fullscreen
+        size: max
       openOnInsert: true
 functions:
   - key: resolver
