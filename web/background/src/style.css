@@ -30,6 +30,7 @@ button {
 
 .editor-root {
   height: 100vh;
+  height: 100dvh;
   display: grid;
   grid-template-columns: 306px minmax(0, 1fr);
   grid-template-rows: minmax(0, 1fr) 56px;
@@ -314,7 +315,7 @@ button {
   min-width: 0;
   overflow: auto;
   padding: 25px 32px;
-  background: #f8f9fb;
+  background: #fff;
 }
 
 .preview-meta {
@@ -541,7 +542,7 @@ button {
 
 .photo-grid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   gap: 12px;
 }
 
@@ -714,25 +715,33 @@ button {
     padding: 18px;
   }
 
-  .photo-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+  .picker-filters {
+    flex-wrap: wrap;
+  }
+
+  .search-box {
+    flex-basis: 100%;
+    max-width: none;
+  }
+
+  .filter-select {
+    flex: 1;
   }
 }
 
 @media (max-width: 660px) {
   .editor-root {
-    height: auto;
-    min-height: 100vh;
-    display: block;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) minmax(150px, 35%) 56px;
   }
 
   .settings-panel {
-    height: auto;
     border-right: 0;
+    border-bottom: 1px solid #e7eaf0;
   }
 
   .settings-scroll {
-    max-height: 48vh;
+    height: 100%;
   }
 
   .preview-area {
@@ -740,8 +749,7 @@ button {
   }
 
   .actions {
-    position: sticky;
-    bottom: 0;
+    grid-row: 3;
   }
 
   .picker-filters {
@@ -759,5 +767,23 @@ button {
 
   .photo-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 420px) {
+  .picker-top,
+  .picker-filters,
+  .picker-results,
+  .picker-footer {
+    padding-right: 14px;
+    padding-left: 14px;
+  }
+
+  .filter-select {
+    min-width: min(120px, 100%);
+  }
+
+  .photo-grid {
+    grid-template-columns: minmax(0, 1fr);
   }
 }

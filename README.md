@@ -2,7 +2,7 @@
 
 PingCode Wiki `document:block` extensions built with Nexus:
 
-- **Myriad - Background:** Native UI block with an editable Wiki body and a fullscreen Custom UI editor. Choose a theme background color or a Pixabay image, with Chinese and English labels and a live preview.
+- **Myriad - Background:** Native UI block with an editable Wiki body and a Custom UI editor in a max-size modal. Choose a theme background color or a Pixabay image, with Chinese and English labels and a live preview.
 - **Myriad - Button:** Custom UI block with templates, configurable shape, size, link, colors, hover styles, shadows, and Iconfont icons.
 - **Myriad - Pages:** Custom UI block that loads Wiki pages dynamically and presents selected pages as configurable page cards.
 - **Myriad - Cards:** Independent block for up to six manually configured cards, with text, icons or Pixabay images.
@@ -24,11 +24,11 @@ Open `http://127.0.0.1:3100/` during local development for the Pages editor, or 
 
 ## Myriad - Cards
 
-Cards is a separate `layout: block` extension; Pages keeps its existing configuration and behavior. The fullscreen Cards editor supports up to six cards, layout and appearance settings, per-card text, icons, links, and Pixabay images. Image search uses the same Nexus resolver and encrypted API key as Background. Run `npm run dev --prefix web/cards` and open `http://127.0.0.1:3104/` to preview the editor locally; add `?mode=view` for the saved-block view. Pixabay search requires a Nexus-hosted session, while default images work in the standalone preview.
+Cards is a separate `layout: block` extension; Pages keeps its existing configuration and behavior. The max-size Cards editor supports up to six cards, layout and appearance settings, per-card text, icons, links, and Pixabay images. Image search uses the same Nexus resolver and encrypted API key as Background. Run `npm run dev --prefix web/cards` and open `http://127.0.0.1:3104/` to preview the editor locally; add `?mode=view` for the saved-block view. Pixabay search requires a Nexus-hosted session, while default images work in the standalone preview.
 
 ## Myriad - Embed HTML
 
-The fullscreen editor follows the prototype's code and URL modes, three example templates, sanitization, border, scrolling, and accessible iframe title. Code runs in a nested sandboxed iframe. URL previews load only when requested in the editor; saved blocks load the URL immediately. Sites can refuse embedding through their own response headers. Run `npm run dev --prefix web/html` and open `http://127.0.0.1:3105/` for the editor or add `?mode=view` for the block.
+The max-size editor follows the prototype's code and URL modes, three example templates, sanitization, border, scrolling, and accessible iframe title. Code runs in a nested sandboxed iframe. URL previews load only when requested in the editor; saved blocks load the URL immediately. Sites can refuse embedding through their own response headers. Run `npm run dev --prefix web/html` and open `http://127.0.0.1:3105/` for the editor or add `?mode=view` for the block.
 
 ## Myriad - Dynamic Content
 

@@ -35,7 +35,8 @@ button {
   grid-template-columns: 340px minmax(0, 1fr);
   grid-template-rows: minmax(0, 1fr) 56px;
   height: 100vh;
-  min-height: 500px;
+  height: 100dvh;
+  min-height: 0;
   background: #fff;
 }
 .settings-panel {
@@ -279,7 +280,7 @@ button {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  background: #fafbfc;
+  background: #fff;
 }
 .preview-heading {
   padding: 18px 24px;
@@ -443,6 +444,7 @@ button {
   display: grid;
   grid-template-rows: 64px 92px minmax(0, 1fr) 40px;
   height: 100vh;
+  height: 100dvh;
   background: #fff;
 }
 .picker-heading {
@@ -637,9 +639,37 @@ button {
     grid-template-columns: minmax(250px, 40%) minmax(0, 1fr);
   }
   .picker-filters {
-    grid-template-columns: minmax(0, 1fr) 130px 130px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .picker-search {
+    grid-column: 1 / -1;
   }
   .picker-grid {
     grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  .picker-shell {
+    grid-template-rows: auto auto minmax(0, 1fr) auto;
+  }
+
+  .picker-heading,
+  .picker-filters,
+  .picker-scroll,
+  .picker-source {
+    padding-right: 16px;
+    padding-left: 16px;
+  }
+
+  .picker-filters {
+    gap: 10px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+  }
+
+  .picker-grid {
+    grid-template-columns: repeat(auto-fill, minmax(135px, 1fr));
   }
 }
