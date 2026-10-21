@@ -79,10 +79,10 @@ extensions:
     title: Myriad - Dynamic Content
     icon: resource:button/myriad.svg
     resource: dynamic-content
-    layout: bodied
+    layout: block
     resolver:
       function: resolver
-    behavior: modal
+    behavior: dynamic
     emitReadyEvent: true
     edit:
       title: Myriad - Dynamic Content

@@ -3,7 +3,6 @@ import {
   api,
   events,
   hasNexusBridge,
-  invoke,
   view,
   type Subscription,
 } from "@pc-nexus/bridge";
@@ -21,6 +20,7 @@ import {
   Search,
 } from "lucide-react";
 import {
+  BACKGROUND_OPTIONS,
   DEFAULT_DYNAMIC_CONTENT_CONFIG,
   MOCK_PAGES,
   MOCK_PAGE_REFS,
@@ -30,6 +30,7 @@ import {
   normalizePageRef,
   normalizeSpace,
   normalizeSpaceItem,
+  pickBackgroundImage,
   type DynamicContentConfig,
   type DynamicContentItem,
   type PageFilters,
@@ -56,26 +57,11 @@ interface ExtensionData {
   entry?: { mode?: "view" | "edit" };
 }
 
-interface ListSpacesPayload {
-  pageIndex: number;
-  pageSize: number;
-  keywords?: string;
-  scopeType?: string;
-  includeArchived?: boolean;
-}
-
-interface ListPagesPayload {
-  pageIndex: number;
-  pageSize: number;
-  spaceId?: string;
-  parentId?: string;
-  ancestorId?: string;
-}
-
 export default function App() {
   const initialized = useRef(false);
   const keywordTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const refreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const syncAttempt = useRef(0);
   const [mode, setMode] = useState<"view" | "edit">("edit");
   const [step, setStep] = useState<"choose" | "configure">("configure");
   const [tab, setTab] = useState<"general" | "content">("content");
@@ -143,47 +129,26 @@ export default function App() {
         if (nextMode === "edit") {
           setStep(nextConfig.sourceType ? "configure" : "choose");
           if (nextConfig.sourceType) {
-            await Promise.all([
-              loadResults(0, nextConfig, false),
-              nextConfig.sourceType === "page"
-                ? loadSpaceOptions(0)
-                : Promise.resolve(),
-            ]);
-            if (lastInvokeFailure && isConnectionError(lastInvokeFailure)) {
-              // The host reuses the dialog iframe without minting a new
-              // context token after the previous editor session, so every
-              // invoke fails with ERR_CONNECTION_CLOSED. Reloading the
-              // iframe re-runs the host injection and refreshes the token.
-              console.warn(
-                "[dynamic-content] 检测到连接已关闭，重载编辑器以刷新会话令牌",
-              );
-              reloadForFreshSession();
+            void syncResultsWithRetry(nextConfig);
+            if (nextConfig.sourceType === "page") {
+              void loadSpaceOptions(0);
             }
           }
         } else {
-          await loadResults(0, nextConfig, false);
-          if (lastInvokeFailure && isConnectionError(lastInvokeFailure)) {
-            console.warn(
-              "[dynamic-content] 视图首屏加载连接被关闭，请求宿主刷新视图",
-            );
-            reloadForFreshSession();
-          }
+          void syncResultsWithRetry(nextConfig);
           subscription = await events.on<{ config?: unknown }>(
             CONFIG_CHANGED_EVENT,
             (payload) => {
               // Saving re-renders this block while the editor modal closes;
-              // wait for that cycle to settle before invoking again, otherwise
-              // the host may still hold a closed connection.
+              // wait for that cycle to settle before loading again.
               if (refreshTimer.current) clearTimeout(refreshTimer.current);
               refreshTimer.current = setTimeout(() => {
-                void (async () => {
-                  const changedConfig = normalizeDynamicContentConfig(
-                    payload?.config,
-                  );
-                  setConfig(changedConfig);
-                  syncReferencePage(changedConfig);
-                  await loadResults(0, changedConfig, false);
-                })();
+                const changedConfig = normalizeDynamicContentConfig(
+                  payload?.config,
+                );
+                setConfig(changedConfig);
+                syncReferencePage(changedConfig);
+                void syncResultsWithRetry(changedConfig);
               }, 600);
             },
           );
@@ -209,7 +174,7 @@ export default function App() {
   }, []);
 
   const isSpaceMode = config.sourceType === "space";
-  const displayItems = resultItems.length ? resultItems : config.items;
+  const displayItems = resultItems;
   const filteredPageList = useMemo(() => {
     const keyword = pageKeyword.trim().toLocaleLowerCase();
     if (!keyword) return pageList;
@@ -250,6 +215,7 @@ export default function App() {
     append = false,
   ): Promise<DynamicContentItem[]> {
     const target = Math.max(0, pageIndex);
+    lastRequestFailure = null;
     setResultLoading(true);
     if (reportErrors) setMessage("");
 
@@ -263,70 +229,28 @@ export default function App() {
         return items;
       }
 
-      let result: WikiPagesResponse = { values: [] };
-      if (targetConfig.sourceType === "space") {
-        try {
-          result = await restJson<WikiPagesResponse>(
-            wikiSpacesPath(target, targetConfig.limit, targetConfig.spaceFilters),
-          );
-        } catch (error) {
-          console.warn(
-            "[dynamic-content] REST 空间列表失败，回退到 resolver",
-            error,
-          );
-          result = await invokeRetry<ListSpacesPayload, WikiPagesResponse>(
-            "listWikiSpaces",
-            {
-              pageIndex: target,
-              pageSize: targetConfig.limit,
-              keywords: targetConfig.spaceFilters.keywords.trim() || undefined,
-              scopeType:
-                targetConfig.spaceFilters.scopeType === "all"
-                  ? undefined
-                  : targetConfig.spaceFilters.scopeType,
-              includeArchived:
-                targetConfig.spaceFilters.includeArchived || undefined,
-            },
-          );
-        }
-      } else {
-        const filters = targetConfig.pageFilters;
-        const pagePath = wikiPagesPath(target, targetConfig.limit, {
-          spaceId: filters.spaceId || undefined,
-          parentId:
-            filters.relation === "parent"
-              ? filters.relationPageId || undefined
-              : undefined,
-          ancestorId:
-            filters.relation === "ancestor"
-              ? filters.relationPageId || undefined
-              : undefined,
-        });
-        try {
-          result = await restJson<WikiPagesResponse>(pagePath);
-        } catch (error) {
-          console.warn(
-            "[dynamic-content] REST 页面列表失败，回退到 resolver",
-            error,
-          );
-          result = await invokeRetry<ListPagesPayload, WikiPagesResponse>(
-            "listWikiPages",
-            {
-              pageIndex: target,
-              pageSize: targetConfig.limit,
-              spaceId: filters.spaceId || undefined,
-              parentId:
-                filters.relation === "parent"
-                  ? filters.relationPageId || undefined
-                  : undefined,
-              ancestorId:
-                filters.relation === "ancestor"
-                  ? filters.relationPageId || undefined
-                  : undefined,
-            },
-          );
-        }
-      }
+      const result =
+        targetConfig.sourceType === "space"
+          ? await restJson<WikiPagesResponse>(
+              wikiSpacesPath(
+                target,
+                targetConfig.limit,
+                targetConfig.spaceFilters,
+              ),
+            )
+          : await restJson<WikiPagesResponse>(
+              wikiPagesPath(target, targetConfig.limit, {
+                spaceId: targetConfig.pageFilters.spaceId || undefined,
+                parentId:
+                  targetConfig.pageFilters.relation === "parent"
+                    ? targetConfig.pageFilters.relationPageId || undefined
+                    : undefined,
+                ancestorId:
+                  targetConfig.pageFilters.relation === "ancestor"
+                    ? targetConfig.pageFilters.relationPageId || undefined
+                    : undefined,
+              }),
+            );
 
       const items = (Array.isArray(result.values) ? result.values : [])
         .map((value) =>
@@ -343,6 +267,7 @@ export default function App() {
       return sorted;
     } catch (error) {
       console.error("[dynamic-content] 结果加载失败", error);
+      lastRequestFailure = error;
       if (!append) {
         setResultItems([]);
         setResultIndex(target);
@@ -356,6 +281,28 @@ export default function App() {
     } finally {
       setResultLoading(false);
     }
+  }
+
+  /**
+   * Re-opening the editor right after saving can inherit a closed host
+   * connection. Keep retrying in the background until a request succeeds
+   * instead of leaving the editor stuck.
+   */
+  async function syncResultsWithRetry(targetConfig: DynamicContentConfig) {
+    syncAttempt.current = 0;
+    const run = async (): Promise<void> => {
+      await loadResults(0, targetConfig, false);
+      if (!lastRequestFailure) return;
+      syncAttempt.current += 1;
+      if (syncAttempt.current > 6) {
+        setMessage("数据加载失败，请稍后重试");
+        return;
+      }
+      const delay = Math.min(30_000, 2_000 * 2 ** (syncAttempt.current - 1));
+      if (refreshTimer.current) clearTimeout(refreshTimer.current);
+      refreshTimer.current = setTimeout(() => void run(), delay);
+    };
+    await run();
   }
 
   async function loadPickList(pageIndex: number, append = false) {
@@ -372,24 +319,11 @@ export default function App() {
         setPickTotal(filtered.length);
         return;
       }
-      let result: WikiPagesResponse;
-      try {
-        result = await restJson<WikiPagesResponse>(
-          wikiPagesPath(target, PICK_PAGE_SIZE, {
-            spaceId: config.pageFilters.spaceId || undefined,
-          }),
-        );
-      } catch (error) {
-        console.warn("[dynamic-content] REST 页面列表失败，回退到 resolver", error);
-        result = await invokeRetry<ListPagesPayload, WikiPagesResponse>(
-          "listWikiPages",
-          {
-            pageIndex: target,
-            pageSize: PICK_PAGE_SIZE,
-            spaceId: config.pageFilters.spaceId || undefined,
-          },
-        );
-      }
+      const result = await restJson<WikiPagesResponse>(
+        wikiPagesPath(target, PICK_PAGE_SIZE, {
+          spaceId: config.pageFilters.spaceId || undefined,
+        }),
+      );
       const pages = (Array.isArray(result.values) ? result.values : [])
         .map(normalizePageRef)
         .filter((page): page is WikiPageRef => page !== null);
@@ -418,18 +352,9 @@ export default function App() {
         setSpaceOptionsTotal(MOCK_SPACES.length);
         return;
       }
-      let result: WikiPagesResponse;
-      try {
-        result = await restJson<WikiPagesResponse>(
-          wikiSpacesPath(target, SPACE_OPTION_PAGE_SIZE),
-        );
-      } catch (error) {
-        console.warn("[dynamic-content] REST 空间列表失败，回退到 resolver", error);
-        result = await invokeRetry<ListSpacesPayload, WikiPagesResponse>(
-          "listWikiSpaces",
-          { pageIndex: target, pageSize: SPACE_OPTION_PAGE_SIZE },
-        );
-      }
+      const result = await restJson<WikiPagesResponse>(
+        wikiSpacesPath(target, SPACE_OPTION_PAGE_SIZE),
+      );
       setSpaceOptions(
         (Array.isArray(result.values) ? result.values : [])
           .map(normalizeSpace)
@@ -553,14 +478,10 @@ export default function App() {
     setSaving(true);
     setMessage("");
     try {
-      const latestItems = await loadResults(0, config, true);
-      const nextConfig = {
-        ...config,
-        items: latestItems.length ? latestItems : config.items,
-      };
-      setConfig(nextConfig);
       if (hasNexusBridge()) {
-        await view.submit({ config: nextConfig, body: [{ id: "content" }] });
+        // Only the query settings are persisted; content is always fetched
+        // live by the REST gateway, so no items snapshot is stored.
+        await view.submit({ config });
       } else {
         setMessage("预览配置已保存");
       }
@@ -626,7 +547,7 @@ export default function App() {
           {tab === "general" ? (
             <>
               <section className="settings-section">
-                <h2>展示方式</h2>
+                <h2>常规</h2>
                 <div className="segments">
                   <button
                     className={config.display === "card" ? "active" : ""}
@@ -678,6 +599,12 @@ export default function App() {
                       >
                         图标 + 文本
                       </button>
+                      <button
+                        className={config.cardType === "image" ? "active" : ""}
+                        onClick={() => update("cardType", "image")}
+                      >
+                        图片 + 文本
+                      </button>
                     </div>
                     <label className="field-label">列数</label>
                     <div className="segments five">
@@ -718,6 +645,58 @@ export default function App() {
                           update("accent", event.target.value)
                         }
                       />
+                    </div>
+                  </>
+                )}
+              </section>
+              <section className="settings-section">
+                <h2>图片</h2>
+                <label className="field-label">图片系列</label>
+                <select
+                  value={config.background}
+                  onChange={(event) =>
+                    update(
+                      "background",
+                      event.target.value as DynamicContentConfig["background"],
+                    )
+                  }
+                >
+                  <option value="none">无</option>
+                  {BACKGROUND_OPTIONS.map((option) => (
+                    <option value={option.key} key={option.key}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                {config.display === "list" && config.background !== "none" && (
+                  <small>列表模式下作为每条结果的图标。</small>
+                )}
+                {config.display === "card" && config.cardType === "image" && (
+                  <>
+                    {config.background === "none" && (
+                      <small>请选择图片系列，卡片顶部将展示该系列图片。</small>
+                    )}
+                    <Range
+                      label="图片高度"
+                      value={config.imageHeight}
+                      min={60}
+                      max={260}
+                      onChange={(value) => update("imageHeight", value)}
+                    />
+                    <label className="field-label">适应方式</label>
+                    <div className="segments">
+                      <button
+                        className={config.imageFit === "cover" ? "active" : ""}
+                        onClick={() => update("imageFit", "cover")}
+                      >
+                        覆盖
+                      </button>
+                      <button
+                        className={config.imageFit === "contain" ? "active" : ""}
+                        onClick={() => update("imageFit", "contain")}
+                      >
+                        完整显示
+                      </button>
                     </div>
                   </>
                 )}
@@ -948,13 +927,26 @@ export default function App() {
         <div className="preview-heading">
           <span>{pickingReference ? "选择参照页面" : "预览"}</span>
           <span className="preview-meta">
+            {!pickingReference && resultError && displayItems.length > 0 && (
+              <button
+                className="text-button warn"
+                type="button"
+                onClick={() => void syncResultsWithRetry(config)}
+              >
+                同步失败，重试
+              </button>
+            )}
             {pickingReference
               ? pickLoading
                 ? "加载中…"
                 : `共 ${pickTotal} 个页面`
               : resultLoading
                 ? "加载中…"
-                : `共 ${resultTotal} 条`}
+                : resultError
+                  ? displayItems.length
+                    ? "显示已保存内容"
+                    : "加载失败"
+                  : `共 ${resultTotal} 条`}
             {pickingReference ? (
               <button
                 className="text-button"
@@ -1140,11 +1132,14 @@ function ContentCard({
 }) {
   const Icon = item.resourceType === "space" ? Layers : FileText;
   const href = item.htmlUrl && item.htmlUrl !== "#" ? item.htmlUrl : null;
+  const isList = config.display === "list";
+  const isImageCard = !isList && config.cardType === "image";
+  const backgroundImage = pickBackgroundImage(config.background, item.id);
   const style = {
     borderRadius: config.radius,
     border: config.border ? "1px solid #e6e9f0" : "1px solid transparent",
     boxShadow: config.shadow ? "0 1px 3px rgba(25, 34, 51, .07)" : "none",
-    textAlign: config.align,
+    textAlign: isList ? "left" : config.align,
     "--accent": config.accent,
   } as CSSProperties;
   const meta = [
@@ -1153,40 +1148,57 @@ function ContentCard({
   ]
     .filter(Boolean)
     .join(" · ");
-  const showIcon = config.display === "list" || config.cardType === "icon";
+  const showIcon = isList || config.cardType === "icon";
 
   const front = (
-    <div
-      className="card-body"
-      style={{
-        padding: config.padding,
-        alignItems:
-          config.display === "list"
+    <>
+      {isImageCard && backgroundImage && (
+        <div
+          className="card-image"
+          style={{
+            height: config.imageHeight,
+            backgroundImage: `url("${backgroundImage}")`,
+            backgroundSize: config.imageFit,
+          }}
+        />
+      )}
+      <div
+        className="card-body"
+        style={{
+          padding: config.padding,
+          alignItems: isList
             ? "center"
             : config.align === "left"
               ? "flex-start"
               : config.align === "right"
                 ? "flex-end"
                 : "center",
-      }}
-    >
-      {showIcon && (
-        <span className="card-icon">
-          <Icon size={20} />
+        }}
+      >
+        {showIcon && (
+          <span
+            className={`card-icon${isList && backgroundImage ? " has-image" : ""}`}
+          >
+            {isList && backgroundImage ? (
+              <img src={backgroundImage} alt="" loading="lazy" />
+            ) : (
+              <Icon size={20} />
+            )}
+          </span>
+        )}
+        <span className="card-text">
+          <strong>
+            {item.name}
+            {href && <ArrowUpRight size={12} className="card-external" />}
+          </strong>
+          {config.showExcerpt && item.description && <p>{item.description}</p>}
+          {config.showMeta && meta && <small className="card-meta">{meta}</small>}
         </span>
-      )}
-      <span className="card-text">
-        <strong>
-          {item.name}
-          {href && <ArrowUpRight size={12} className="card-external" />}
-        </strong>
-        {config.showExcerpt && item.description && <p>{item.description}</p>}
-        {config.showMeta && meta && <small className="card-meta">{meta}</small>}
-      </span>
-    </div>
+      </div>
+    </>
   );
 
-  const flip = config.style === "flip" && config.display === "card";
+  const flip = config.style === "flip" && !isList;
 
   return (
     <div
@@ -1386,12 +1398,32 @@ function wikiPagesPath(
 }
 
 /**
- * Calls PingCode REST through the host's `apiInvoke` bridge channel. This is
- * independent from `invokeFunction`, which can be left on a closed connection
- * when the host reopens an editor dialog.
+ * Calls PingCode REST through the host's REST gateway
+ * (`/api/nexus/gateway/rest-api/invoke` behind `api.invoke`). The editor and
+ * the saved block always load their data through this channel; no resolver
+ * `invokeFunction` call is involved.
  */
-async function restJson<TResult>(path: string): Promise<TResult> {
-  const response = await api.invoke(path);
+async function restJson<TResult>(path: string, attempts = 3): Promise<TResult> {
+  let lastError: unknown;
+  let response: Response | null = null;
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    try {
+      response = await api.invoke(path);
+      break;
+    } catch (error) {
+      lastError = error;
+      console.warn(
+        `[dynamic-content] REST ${path} 第 ${attempt + 1} 次失败`,
+        error,
+      );
+      if (attempt < attempts - 1) {
+        await new Promise((resolve) =>
+          setTimeout(resolve, 600 * (attempt + 1)),
+        );
+      }
+    }
+  }
+  if (!response) throw lastError;
   if (!response.ok) {
     let message = `接口请求失败 (${response.status})`;
     try {
@@ -1405,22 +1437,11 @@ async function restJson<TResult>(path: string): Promise<TResult> {
   return (await response.json()) as TResult;
 }
 
-let lastInvokeFailure: unknown = null;
-
-const RELOAD_GUARD_KEY = "myriad-dynamic-content:last-reload";
-
-function isConnectionError(error: unknown): boolean {
-  const message = String(
-    (error as { message?: unknown })?.message ?? error ?? "",
-  );
-  return /ERR_CONNECTION|ERR_NETWORK|ECONNRESET|Failed to fetch|NetworkError/i.test(
-    message,
-  );
-}
+let lastRequestFailure: unknown = null;
 
 async function refreshSession(): Promise<void> {
   // Ask the host to recreate the view, which re-mints the context token and
-  // re-establishes the invoke connection.
+  // re-establishes the connection.
   if (hasNexusBridge()) {
     try {
       await view.refresh();
@@ -1430,50 +1451,6 @@ async function refreshSession(): Promise<void> {
     }
   }
   window.location.reload();
-}
-
-function reloadForFreshSession(): void {
-  try {
-    const last = Number(window.sessionStorage.getItem(RELOAD_GUARD_KEY) ?? "0");
-    // Avoid a reload loop when the host still cannot provide a token.
-    if (Date.now() - last < 5000) return;
-    window.sessionStorage.setItem(RELOAD_GUARD_KEY, String(Date.now()));
-  } catch {
-    return;
-  }
-  void refreshSession();
-}
-
-async function invokeRetry<TPayload, TResult>(
-  name: string,
-  payload: TPayload,
-  attempts = 5,
-  delayMs = 500,
-): Promise<TResult> {
-  let lastError: unknown;
-  for (let attempt = 0; attempt < attempts; attempt += 1) {
-    try {
-      const result = await invoke<TPayload, TResult>(name, payload);
-      lastInvokeFailure = null;
-      return result;
-    } catch (error) {
-      lastError = error;
-      lastInvokeFailure = error;
-      const tunnelToken = (
-        window as unknown as { __TUNNEL_TOKEN__?: string }
-      ).__TUNNEL_TOKEN__;
-      console.warn(
-        `[dynamic-content] invoke ${name} 第 ${attempt + 1} 次失败`,
-        { error, hasTunnelToken: Boolean(tunnelToken) },
-      );
-      if (attempt < attempts - 1) {
-        await new Promise((resolve) =>
-          setTimeout(resolve, delayMs * (attempt + 1)),
-        );
-      }
-    }
-  }
-  throw lastError;
 }
 
 function spaceLabel(space: WikiSpace): string {

@@ -3,10 +3,92 @@ export type DynamicContentDisplay = "card" | "list";
 export type DynamicContentSort = "updated_desc" | "created_desc" | "title_asc";
 export type DynamicContentColumns = 1 | 2 | 3 | 4 | 6;
 export type DynamicContentAlign = "left" | "center" | "right";
-export type DynamicContentCardType = "text" | "icon";
+export type DynamicContentCardType = "text" | "icon" | "image";
 export type DynamicContentCardStyle = "classic" | "hover" | "flip";
+export type DynamicContentBackground =
+  | "none"
+  | "watercolor"
+  | "wavy"
+  | "nature"
+  | "business"
+  | "gradient";
 export type SpaceScopeType = "all" | "organization" | "user_group" | "user";
 export type PageRelation = "none" | "parent" | "ancestor";
+
+export interface BackgroundOption {
+  key: Exclude<DynamicContentBackground, "none">;
+  label: string;
+  files: string[];
+}
+
+export const BACKGROUND_OPTIONS: BackgroundOption[] = [
+  {
+    key: "watercolor",
+    label: "水彩",
+    files: [
+      "background/Watercolor/charlesrondeau-water-1018808_1920.jpg",
+      "background/Watercolor/pexels-beach-1851101_1920.jpg",
+      "background/Watercolor/stocksnap-sea-2601374_1920.jpg",
+    ],
+  },
+  {
+    key: "wavy",
+    label: "波浪",
+    files: [
+      "background/wavy/cnstnt-canyon-1356886_1920.jpg",
+      "background/wavy/stevesnyderphotography-arizona-9839880_1920.jpg",
+      "background/wavy/tricell1991-tea-plantations-3941741_1920.jpg",
+    ],
+  },
+  {
+    key: "nature",
+    label: "自然",
+    files: [
+      "background/Nature/12019-maldives-1993704_1920.jpg",
+      "background/Nature/guddanti-boat-5627042.jpg",
+      "background/Nature/neelam279-white-flowers-10281727_1920.jpg",
+      "background/Nature/renegossner-water-8100724.jpg",
+      "background/Nature/tama66-field-3379250_1920.jpg",
+    ],
+  },
+  {
+    key: "business",
+    label: "商务",
+    files: [
+      "background/Business/alpeva232-work-4372725_1920.jpg",
+      "background/Business/pexels-chairs-2181916_1920.jpg",
+      "background/Business/stocksnap-macbook-air-2628552_1920.jpg",
+    ],
+  },
+  {
+    key: "gradient",
+    label: "渐变",
+    files: [
+      "background/Gradient/alexanderstein-colorful-182220.jpg",
+      "background/Gradient/inspiredimages-pencils-452238_1920.jpg",
+      "background/Gradient/stux-to-paint-268185_1920.jpg",
+    ],
+  },
+];
+
+/**
+ * Picks a stable pseudo-random image for an item so cards keep their picture
+ * across re-renders while the whole set still looks randomly distributed.
+ */
+export function pickBackgroundImage(
+  background: DynamicContentBackground,
+  seed: string,
+): string | null {
+  if (background === "none") return null;
+  const option = BACKGROUND_OPTIONS.find((item) => item.key === background);
+  if (!option || option.files.length === 0) return null;
+  const value = `${seed}:${background}`;
+  let hash = 0;
+  for (let index = 0; index < value.length; index += 1) {
+    hash = (hash * 31 + value.charCodeAt(index)) >>> 0;
+  }
+  return option.files[hash % option.files.length];
+}
 
 export interface WikiSpace {
   id: string;
@@ -63,6 +145,9 @@ export interface DynamicContentConfig {
   align: DynamicContentAlign;
   cardType: DynamicContentCardType;
   style: DynamicContentCardStyle;
+  background: DynamicContentBackground;
+  imageHeight: number;
+  imageFit: "cover" | "contain";
   accent: string;
   gap: number;
   padding: number;
@@ -73,7 +158,6 @@ export interface DynamicContentConfig {
   limit: number;
   showExcerpt: boolean;
   showMeta: boolean;
-  items: DynamicContentItem[];
 }
 
 export const DEFAULT_DYNAMIC_CONTENT_CONFIG: DynamicContentConfig = {
@@ -91,6 +175,9 @@ export const DEFAULT_DYNAMIC_CONTENT_CONFIG: DynamicContentConfig = {
   align: "left",
   cardType: "icon",
   style: "hover",
+  background: "none",
+  imageHeight: 140,
+  imageFit: "cover",
   accent: "#3d5cf0",
   gap: 16,
   padding: 22,
@@ -101,7 +188,6 @@ export const DEFAULT_DYNAMIC_CONTENT_CONFIG: DynamicContentConfig = {
   limit: 12,
   showExcerpt: true,
   showMeta: true,
-  items: [],
 };
 
 const MOCK_BASE_TIME = Date.now();
@@ -278,9 +364,6 @@ export function normalizeDynamicContentConfig(value: unknown): DynamicContentCon
   const rawPageFilters = isRecord(value["pageFilters"]) ? value["pageFilters"] : {};
   const relation = rawPageFilters["relation"];
   const scopeType = rawSpaceFilters["scopeType"];
-  const items = Array.isArray(value["items"])
-    ? value["items"].map(normalizeDynamicContentItem).filter((item): item is DynamicContentItem => item !== null)
-    : [];
 
   return {
     sourceType: sourceType === "space" || sourceType === "page" ? sourceType : null,
@@ -302,8 +385,15 @@ export function normalizeDynamicContentConfig(value: unknown): DynamicContentCon
     display: display === "list" ? "list" : "card",
     columns: choice(Number(value["columns"]), [1, 2, 3, 4, 6] as const, 3),
     align: choice(value["align"], ["left", "center", "right"] as const, "left"),
-    cardType: choice(value["cardType"], ["text", "icon"] as const, "icon"),
+    cardType: choice(value["cardType"], ["text", "icon", "image"] as const, "icon"),
     style: choice(value["style"], ["classic", "hover", "flip"] as const, "hover"),
+    background: choice(
+      value["background"],
+      ["none", "watercolor", "wavy", "nature", "business", "gradient"] as const,
+      "none",
+    ),
+    imageHeight: numberInRange(value["imageHeight"], 140, 60, 260),
+    imageFit: choice(value["imageFit"], ["cover", "contain"] as const, "cover"),
     accent: /^#[\da-f]{6}$/i.test(String(value["accent"] ?? ""))
       ? String(value["accent"])
       : DEFAULT_DYNAMIC_CONTENT_CONFIG.accent,
@@ -322,7 +412,6 @@ export function normalizeDynamicContentConfig(value: unknown): DynamicContentCon
       typeof value["showMeta"] === "boolean"
         ? value["showMeta"]
         : DEFAULT_DYNAMIC_CONTENT_CONFIG.showMeta,
-    items,
   };
 }
 
