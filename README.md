@@ -6,6 +6,7 @@ PingCode Wiki `document:block` extensions built with Nexus:
 - **Myriad - Button:** Custom UI block with templates, configurable shape, size, link, colors, hover styles, shadows, and Iconfont icons.
 - **Myriad - Pages:** Custom UI block that loads Wiki pages dynamically and presents selected pages as configurable page cards.
 - **Myriad - Cards:** Independent block for up to six manually configured cards, with text, icons or Pixabay images.
+- **Myriad - Embed HTML:** Sandboxed block for custom HTML/CSS/JS or an external website URL.
 - **Myriad - Dynamic Content:** Custom UI block that lists Wiki spaces or pages matching configurable filters, with pagination.
 
 Background and Button use `web/button/public/myriad.svg` for their Wiki slash-menu icon. The Button editor uses the same logo in its header.
@@ -24,6 +25,10 @@ Open `http://127.0.0.1:3100/` during local development for the Pages editor, or 
 ## Myriad - Cards
 
 Cards is a separate `layout: block` extension; Pages keeps its existing configuration and behavior. The fullscreen Cards editor supports up to six cards, layout and appearance settings, per-card text, icons, links, and Pixabay images. Image search uses the same Nexus resolver and encrypted API key as Background. Run `npm run dev --prefix web/cards` and open `http://127.0.0.1:3104/` to preview the editor locally; add `?mode=view` for the saved-block view. Pixabay search requires a Nexus-hosted session, while default images work in the standalone preview.
+
+## Myriad - Embed HTML
+
+The fullscreen editor follows the prototype's code and URL modes, three example templates, width and height controls, sanitization, border, scrolling, and accessible iframe title. Code runs in a nested sandboxed iframe. URL previews load only when requested in the editor; saved blocks load the URL immediately. Sites can refuse embedding through their own response headers. Run `npm run dev --prefix web/html` and open `http://127.0.0.1:3105/` for the editor or add `?mode=view` for the block.
 
 ## Myriad - Dynamic Content
 
@@ -81,13 +86,14 @@ npm install
 npm install --prefix web/button
 npm install --prefix web/pages
 npm install --prefix web/cards
+npm install --prefix web/html
 npm install --prefix web/background
 npm install --prefix web/dynamic-content
 npm run build
 nexus lint
 ```
 
-Background uses the Native UI entry `plugins/background/native-ui/main.tsx` for its saved block and `web/background/dist` for configuration. Button, Pages, and Cards use `web/button/dist`, `web/pages/dist`, and `web/cards/dist` respectively.
+Background uses the Native UI entry `plugins/background/native-ui/main.tsx` for its saved block and `web/background/dist` for configuration. Button, Pages, Cards, and Embed HTML use their own `web/*/dist` Custom UI resources.
 
 ## Alpha and RC deployment
 

@@ -76,6 +76,21 @@ extensions:
       viewport:
         size: fullscreen
       openOnInsert: true
+  - key: myriad-html-iframe
+    target: pcm:wiki:document:block
+    title: Myriad - Embed HTML
+    icon: resource:button/myriad.svg
+    resource: embed-html
+    layout: block
+    behavior: modal
+    emitReadyEvent: true
+    edit:
+      title: Myriad - Embed HTML
+      icon: resource:button/myriad.svg
+      resource: embed-html
+      viewport:
+        size: fullscreen
+      openOnInsert: true
   - key: myriad-dynamic-content
     target: pcm:wiki:document:block
     title: Myriad - Dynamic Content
@@ -110,6 +125,8 @@ resources:
     path: web/pages/dist
   - key: card-grid
     path: web/cards/dist
+  - key: embed-html
+    path: web/html/dist
   - key: dynamic-content
     path: web/dynamic-content/dist
 permissions:
@@ -125,6 +142,14 @@ permissions:
       - https://pixabay.com
       - https://cdn.pixabay.com
       - https://at.alicdn.com
+    frames:
+      - "*"
+  content:
+    scripts:
+      - unsafe-inline
+      - unsafe-hashes
+    styles:
+      - unsafe-inline
 environment:
   variables:
     - key: PIXABAY_API_KEY
