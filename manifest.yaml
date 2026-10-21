@@ -42,23 +42,6 @@ extensions:
       viewport:
         size: fullscreen
       openOnInsert: true
-  - key: myriad-cards
-    target: pcm:wiki:document:block
-    title: Myriad - Pages
-    icon: resource:button/myriad.svg
-    resource: cards
-    layout: bodied
-    resolver:
-      function: resolver
-    behavior: modal
-    emitReadyEvent: true
-    edit:
-      title: Myriad - Pages
-      icon: resource:button/myriad.svg
-      resource: cards
-      viewport:
-        size: xlarge
-      openOnInsert: true
   - key: myriad-card-grid
     target: pcm:wiki:document:block
     title: Myriad - Cards
@@ -91,7 +74,7 @@ extensions:
       icon: resource:button/myriad.svg
       resource: dynamic-content
       viewport:
-        size: xlarge
+        size: fullscreen
       openOnInsert: true
 functions:
   - key: resolver
