@@ -45,9 +45,6 @@ const LABELS = {
     loadUrl: "尝试真实加载",
     urlPlaceholder: "预览暂不主动请求外部网站",
     urlBlocked: "若站点禁止被嵌入，加载后可能显示空白。",
-    size: "尺寸",
-    width: "宽度",
-    height: "高度",
     options: "选项",
     sanitize: "净化 HTML",
     sanitizeHelp: "移除脚本与内联事件，禁止自定义 JS 执行",
@@ -85,9 +82,6 @@ const LABELS = {
     loadUrl: "Try loading site",
     urlPlaceholder: "Preview does not request external sites automatically",
     urlBlocked: "A site that disallows embedding may appear blank.",
-    size: "Size",
-    width: "Width",
-    height: "Height",
     options: "Options",
     sanitize: "Sanitize HTML",
     sanitizeHelp: "Remove scripts and inline events to disable custom JS",
@@ -131,7 +125,7 @@ function htmlDocument(
   return [
     "<!doctype html>",
     '<meta charset="utf-8">',
-    `<style>html,body{margin:0;min-height:100%;overflow:${overflow}}</style>`,
+    `<style>html,body{margin:0;overflow:${overflow}}</style>`,
     code,
   ].join("\n");
 }
@@ -179,10 +173,7 @@ function EmbeddedContent({
 
   return (
     <div className={`html-block ${config.showBorder ? "with-border" : ""}`}>
-      <div
-        className="html-shell"
-        style={{ width: `${config.width}%`, height: config.height }}
-      >
+      <div className={`html-shell ${config.mode}-mode`}>
         <span
           className={`mode-badge ${!config.sanitize && config.mode === "code" ? "warning" : ""}`}
         >
@@ -235,40 +226,6 @@ function EmbeddedContent({
         )}
       </div>
     </div>
-  );
-}
-
-function NumberField({
-  label,
-  value,
-  min,
-  max,
-  unit,
-  onChange,
-}: {
-  label: string;
-  value: number;
-  min: number;
-  max: number;
-  unit: string;
-  onChange: (value: number) => void;
-}) {
-  return (
-    <label className="number-field">
-      <span>{label}</span>
-      <span className="number-control">
-        <input
-          type="number"
-          min={min}
-          max={max}
-          value={value}
-          onChange={(event) =>
-            onChange(Math.max(min, Math.min(max, Number(event.target.value))))
-          }
-        />
-        <small>{unit}</small>
-      </span>
-    </label>
   );
 }
 
@@ -462,27 +419,6 @@ export default function App() {
               </p>
             </section>
           )}
-          <section className="settings-section">
-            <h2>{words.size}</h2>
-            <div className="number-fields">
-              <NumberField
-                label={words.width}
-                value={config.width}
-                min={20}
-                max={100}
-                unit="%"
-                onChange={(value) => update("width", value)}
-              />
-              <NumberField
-                label={words.height}
-                value={config.height}
-                min={80}
-                max={1600}
-                unit="px"
-                onChange={(value) => update("height", value)}
-              />
-            </div>
-          </section>
           <section className="settings-section">
             <h2>{words.options}</h2>
             <label className="check-field">

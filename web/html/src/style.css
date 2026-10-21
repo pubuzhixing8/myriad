@@ -150,42 +150,6 @@ button {
   margin-top: 2px;
 }
 
-.number-fields {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.number-field > span:first-child {
-  display: block;
-  margin-bottom: 7px;
-  color: #6c798c;
-  font-size: 12px;
-}
-
-.number-control {
-  display: flex;
-  height: 36px;
-  align-items: center;
-  border: 1px solid #dce2eb;
-  border-radius: 6px;
-  background: #fff;
-}
-
-.number-control input {
-  width: 100%;
-  min-width: 0;
-  height: 100%;
-  padding: 0 8px;
-  border: 0;
-  outline-color: #6985ff;
-}
-
-.number-control small {
-  padding-right: 10px;
-  color: #9ba6b7;
-}
-
 .check-field {
   display: flex;
   align-items: flex-start;
@@ -250,12 +214,11 @@ button {
 
 .html-block {
   width: 100%;
-  margin: 6px 0 14px;
 }
 
 .html-shell {
   position: relative;
-  max-width: 100%;
+  width: 100%;
   overflow: hidden;
   border-radius: 10px;
   background: #fff;
@@ -269,7 +232,6 @@ button {
 .html-shell iframe {
   display: block;
   width: 100%;
-  height: 100%;
   border: 0;
   background: #fff;
 }
@@ -304,7 +266,6 @@ button {
 .url-placeholder {
   display: grid;
   width: 100%;
-  height: 100%;
   place-items: center;
   background: repeating-linear-gradient(
     45deg,

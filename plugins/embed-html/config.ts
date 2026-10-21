@@ -5,8 +5,6 @@ export interface EmbedHtmlConfig {
   mode: EmbedMode;
   code: string;
   url: string;
-  width: number;
-  height: number;
   sanitize: boolean;
   showBorder: boolean;
   scrolling: Scrolling;
@@ -68,8 +66,6 @@ export const DEFAULT_CONFIG: EmbedHtmlConfig = {
     "</div>",
   ].join("\n"),
   url: "https://pingcode.com",
-  width: 100,
-  height: 280,
   sanitize: true,
   showBorder: true,
   scrolling: "auto",
@@ -82,26 +78,12 @@ function object(value: unknown): Record<string, unknown> {
     : {};
 }
 
-function numberInRange(
-  value: unknown,
-  fallback: number,
-  min: number,
-  max: number,
-): number {
-  const number = Number(value);
-  return Number.isFinite(number)
-    ? Math.max(min, Math.min(max, number))
-    : fallback;
-}
-
 export function normalizeConfig(value: unknown): EmbedHtmlConfig {
   const source = object(value);
   return {
     mode: source.mode === "url" ? "url" : "code",
     code: typeof source.code === "string" ? source.code : DEFAULT_CONFIG.code,
     url: typeof source.url === "string" ? source.url : DEFAULT_CONFIG.url,
-    width: numberInRange(source.width, DEFAULT_CONFIG.width, 20, 100),
-    height: numberInRange(source.height, DEFAULT_CONFIG.height, 80, 1600),
     sanitize: source.sanitize !== false,
     showBorder: source.showBorder !== false,
     scrolling:
