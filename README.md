@@ -32,7 +32,7 @@ Inserting the block first asks for a source type, then opens a settings page wit
 - **Space:** filter spaces by name keyword, visibility scope (`scope_type`), and archived state. The block lists the matching spaces from `listWikiSpaces` (`GET /v2/wiki/spaces`).
 - **Page:** filter pages by space and, optionally, by a reference page (direct children via `parent_id` or all descendants via `ancestor_id`). The block lists the matching pages from `listWikiPages` (`GET /v2/wiki/pages`).
 
-Display settings choose card/list layout, columns, items per page (also used as page size), sorting, excerpts, and metadata. The left pane holds filters and display settings; the right pane previews exactly what the saved block will render, including pagination. Saved blocks re-run the query in view mode and support previous/next paging; the last saved snapshot stays as a fallback. Open `http://127.0.0.1:3102/` during local development, or add `?mode=view` for its saved-block view.
+Display settings mirror the Cards block: card/list layout, alignment, card type (text or icon + text), 1–6 columns, hover effect (none / elevate / flip), accent color, gap / padding / radius / border / shadow, excerpts, metadata, sorting, and items per page (also used as page size). The left pane holds filters and display settings; the right pane previews exactly what the saved block will render, appending more results through a "load more" button. Saved blocks re-run the query in view mode and support the same load-more behavior; the last saved snapshot stays as a fallback. Open `http://127.0.0.1:3102/` during local development, or add `?mode=view` for its saved-block view.
 
 ## Background 本地调试
 
