@@ -28,7 +28,7 @@ Cards is a separate `layout: block` extension; Pages keeps its existing configur
 
 ## Myriad - Embed HTML
 
-The fullscreen editor follows the prototype's code and URL modes, three example templates, width and height controls, sanitization, border, scrolling, and accessible iframe title. Code runs in a nested sandboxed iframe. URL previews load only when requested in the editor; saved blocks load the URL immediately. Sites can refuse embedding through their own response headers. Run `npm run dev --prefix web/html` and open `http://127.0.0.1:3105/` for the editor or add `?mode=view` for the block.
+The fullscreen editor follows the prototype's code and URL modes, three example templates, sanitization, border, scrolling, and accessible iframe title. Code runs in a nested sandboxed iframe. URL previews load only when requested in the editor; saved blocks load the URL immediately. Sites can refuse embedding through their own response headers. Run `npm run dev --prefix web/html` and open `http://127.0.0.1:3105/` for the editor or add `?mode=view` for the block.
 
 ## Myriad - Dynamic Content
 
