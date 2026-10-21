@@ -1,7 +1,10 @@
 export type DynamicContentSourceType = "space" | "page";
 export type DynamicContentDisplay = "card" | "list";
 export type DynamicContentSort = "updated_desc" | "created_desc" | "title_asc";
-export type DynamicContentColumns = 1 | 2 | 3;
+export type DynamicContentColumns = 1 | 2 | 3 | 4 | 6;
+export type DynamicContentAlign = "left" | "center" | "right";
+export type DynamicContentCardType = "text" | "icon";
+export type DynamicContentCardStyle = "classic" | "hover" | "flip";
 export type SpaceScopeType = "all" | "organization" | "user_group" | "user";
 export type PageRelation = "none" | "parent" | "ancestor";
 
@@ -57,6 +60,15 @@ export interface DynamicContentConfig {
   pageFilters: PageFilters;
   display: DynamicContentDisplay;
   columns: DynamicContentColumns;
+  align: DynamicContentAlign;
+  cardType: DynamicContentCardType;
+  style: DynamicContentCardStyle;
+  accent: string;
+  gap: number;
+  padding: number;
+  radius: number;
+  border: boolean;
+  shadow: boolean;
   sort: DynamicContentSort;
   limit: number;
   showExcerpt: boolean;
@@ -76,6 +88,15 @@ export const DEFAULT_DYNAMIC_CONTENT_CONFIG: DynamicContentConfig = {
   },
   display: "card",
   columns: 3,
+  align: "left",
+  cardType: "icon",
+  style: "hover",
+  accent: "#3d5cf0",
+  gap: 16,
+  padding: 22,
+  radius: 8,
+  border: true,
+  shadow: true,
   sort: "updated_desc",
   limit: 12,
   showExcerpt: true,
@@ -249,7 +270,6 @@ export function normalizeDynamicContentItem(value: unknown): DynamicContentItem 
 
 export function normalizeDynamicContentConfig(value: unknown): DynamicContentConfig {
   if (!isRecord(value)) return DEFAULT_DYNAMIC_CONTENT_CONFIG;
-  const columns = Number(value["columns"]);
   const limit = Math.min(50, Math.max(1, Number(value["limit"]) || 12));
   const display = value["display"];
   const sort = value["sort"];
@@ -280,7 +300,18 @@ export function normalizeDynamicContentConfig(value: unknown): DynamicContentCon
       relationPageName: String(rawPageFilters["relationPageName"] ?? ""),
     },
     display: display === "list" ? "list" : "card",
-    columns: columns === 1 || columns === 2 ? columns : 3,
+    columns: choice(Number(value["columns"]), [1, 2, 3, 4, 6] as const, 3),
+    align: choice(value["align"], ["left", "center", "right"] as const, "left"),
+    cardType: choice(value["cardType"], ["text", "icon"] as const, "icon"),
+    style: choice(value["style"], ["classic", "hover", "flip"] as const, "hover"),
+    accent: /^#[\da-f]{6}$/i.test(String(value["accent"] ?? ""))
+      ? String(value["accent"])
+      : DEFAULT_DYNAMIC_CONTENT_CONFIG.accent,
+    gap: numberInRange(value["gap"], 16, 0, 40),
+    padding: numberInRange(value["padding"], 22, 8, 48),
+    radius: numberInRange(value["radius"], 8, 0, 24),
+    border: value["border"] !== false,
+    shadow: value["shadow"] !== false,
     sort: sort === "created_desc" || sort === "title_asc" ? sort : "updated_desc",
     limit,
     showExcerpt:
@@ -293,4 +324,20 @@ export function normalizeDynamicContentConfig(value: unknown): DynamicContentCon
         : DEFAULT_DYNAMIC_CONTENT_CONFIG.showMeta,
     items,
   };
+}
+
+function choice<T>(value: unknown, allowed: readonly T[], fallback: T): T {
+  return allowed.includes(value as T) ? (value as T) : fallback;
+}
+
+function numberInRange(
+  value: unknown,
+  fallback: number,
+  min: number,
+  max: number,
+): number {
+  const number = Number(value);
+  return Number.isFinite(number)
+    ? Math.max(min, Math.min(max, number))
+    : fallback;
 }

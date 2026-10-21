@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import {
+  api,
   events,
   hasNexusBridge,
   invoke,
@@ -7,15 +8,16 @@ import {
   type Subscription,
 } from "@pc-nexus/bridge";
 import {
+  AlignCenter,
+  AlignLeft,
+  AlignRight,
+  ArrowUpRight,
   ChevronLeft,
   ChevronRight,
-  ExternalLink,
   FileText,
   Layers,
-  List,
   LoaderCircle,
   RefreshCw,
-  Save,
   Search,
 } from "lucide-react";
 import {
@@ -73,8 +75,10 @@ interface ListPagesPayload {
 export default function App() {
   const initialized = useRef(false);
   const keywordTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const refreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [mode, setMode] = useState<"view" | "edit">("edit");
   const [step, setStep] = useState<"choose" | "configure">("configure");
+  const [tab, setTab] = useState<"general" | "content">("content");
   const [config, setConfig] = useState<DynamicContentConfig>(
     DEFAULT_DYNAMIC_CONTENT_CONFIG,
   );
@@ -145,20 +149,42 @@ export default function App() {
                 ? loadSpaceOptions(0)
                 : Promise.resolve(),
             ]);
+            if (lastInvokeFailure && isConnectionError(lastInvokeFailure)) {
+              // The host reuses the dialog iframe without minting a new
+              // context token after the previous editor session, so every
+              // invoke fails with ERR_CONNECTION_CLOSED. Reloading the
+              // iframe re-runs the host injection and refreshes the token.
+              console.warn(
+                "[dynamic-content] 检测到连接已关闭，重载编辑器以刷新会话令牌",
+              );
+              reloadForFreshSession();
+            }
           }
         } else {
           await loadResults(0, nextConfig, false);
+          if (lastInvokeFailure && isConnectionError(lastInvokeFailure)) {
+            console.warn(
+              "[dynamic-content] 视图首屏加载连接被关闭，请求宿主刷新视图",
+            );
+            reloadForFreshSession();
+          }
           subscription = await events.on<{ config?: unknown }>(
             CONFIG_CHANGED_EVENT,
             (payload) => {
-              void (async () => {
-                const changedConfig = normalizeDynamicContentConfig(
-                  payload?.config,
-                );
-                setConfig(changedConfig);
-                syncReferencePage(changedConfig);
-                await loadResults(0, changedConfig, false);
-              })();
+              // Saving re-renders this block while the editor modal closes;
+              // wait for that cycle to settle before invoking again, otherwise
+              // the host may still hold a closed connection.
+              if (refreshTimer.current) clearTimeout(refreshTimer.current);
+              refreshTimer.current = setTimeout(() => {
+                void (async () => {
+                  const changedConfig = normalizeDynamicContentConfig(
+                    payload?.config,
+                  );
+                  setConfig(changedConfig);
+                  syncReferencePage(changedConfig);
+                  await loadResults(0, changedConfig, false);
+                })();
+              }, 600);
             },
           );
           requestAnimationFrame(
@@ -166,6 +192,7 @@ export default function App() {
           );
         }
       } catch (error) {
+        console.error("[dynamic-content] 初始化失败", error);
         setMessage(error instanceof Error ? error.message : "动态内容加载失败");
       } finally {
         setLoading(false);
@@ -176,12 +203,12 @@ export default function App() {
     return () => {
       subscription?.unsubscribe();
       if (keywordTimer.current) clearTimeout(keywordTimer.current);
+      if (refreshTimer.current) clearTimeout(refreshTimer.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const isSpaceMode = config.sourceType === "space";
-  const pageSize = config.limit;
   const displayItems = resultItems.length ? resultItems : config.items;
   const filteredPageList = useMemo(() => {
     const keyword = pageKeyword.trim().toLocaleLowerCase();
@@ -205,10 +232,13 @@ export default function App() {
     );
   }
 
-  function patchDisplay(patch: Partial<DynamicContentConfig>) {
-    const next = { ...config, ...patch };
+  function update<K extends keyof DynamicContentConfig>(
+    key: K,
+    value: DynamicContentConfig[K],
+  ) {
+    const next = { ...config, [key]: value };
     setConfig(next);
-    if ("sort" in patch || "limit" in patch) {
+    if (key === "sort" || key === "limit") {
       void loadResults(0, next, false);
     }
   }
@@ -217,6 +247,7 @@ export default function App() {
     pageIndex: number,
     targetConfig: DynamicContentConfig,
     reportErrors = true,
+    append = false,
   ): Promise<DynamicContentItem[]> {
     const target = Math.max(0, pageIndex);
     setResultLoading(true);
@@ -225,7 +256,7 @@ export default function App() {
     try {
       if (!hasNexusBridge()) {
         const { items, total } = mockResults(targetConfig, target);
-        setResultItems(items);
+        setResultItems((current) => mergeById(current, items, append));
         setResultIndex(target);
         setResultTotal(total);
         setResultError("");
@@ -234,38 +265,67 @@ export default function App() {
 
       let result: WikiPagesResponse = { values: [] };
       if (targetConfig.sourceType === "space") {
-        result = await invoke<ListSpacesPayload, WikiPagesResponse>(
-          "listWikiSpaces",
-          {
-            pageIndex: target,
-            pageSize: targetConfig.limit,
-            keywords: targetConfig.spaceFilters.keywords.trim() || undefined,
-            scopeType:
-              targetConfig.spaceFilters.scopeType === "all"
-                ? undefined
-                : targetConfig.spaceFilters.scopeType,
-            includeArchived:
-              targetConfig.spaceFilters.includeArchived || undefined,
-          },
-        );
+        try {
+          result = await restJson<WikiPagesResponse>(
+            wikiSpacesPath(target, targetConfig.limit, targetConfig.spaceFilters),
+          );
+        } catch (error) {
+          console.warn(
+            "[dynamic-content] REST 空间列表失败，回退到 resolver",
+            error,
+          );
+          result = await invokeRetry<ListSpacesPayload, WikiPagesResponse>(
+            "listWikiSpaces",
+            {
+              pageIndex: target,
+              pageSize: targetConfig.limit,
+              keywords: targetConfig.spaceFilters.keywords.trim() || undefined,
+              scopeType:
+                targetConfig.spaceFilters.scopeType === "all"
+                  ? undefined
+                  : targetConfig.spaceFilters.scopeType,
+              includeArchived:
+                targetConfig.spaceFilters.includeArchived || undefined,
+            },
+          );
+        }
       } else {
         const filters = targetConfig.pageFilters;
-        result = await invoke<ListPagesPayload, WikiPagesResponse>(
-          "listWikiPages",
-          {
-            pageIndex: target,
-            pageSize: targetConfig.limit,
-            spaceId: filters.spaceId || undefined,
-            parentId:
-              filters.relation === "parent"
-                ? filters.relationPageId || undefined
-                : undefined,
-            ancestorId:
-              filters.relation === "ancestor"
-                ? filters.relationPageId || undefined
-                : undefined,
-          },
-        );
+        const pagePath = wikiPagesPath(target, targetConfig.limit, {
+          spaceId: filters.spaceId || undefined,
+          parentId:
+            filters.relation === "parent"
+              ? filters.relationPageId || undefined
+              : undefined,
+          ancestorId:
+            filters.relation === "ancestor"
+              ? filters.relationPageId || undefined
+              : undefined,
+        });
+        try {
+          result = await restJson<WikiPagesResponse>(pagePath);
+        } catch (error) {
+          console.warn(
+            "[dynamic-content] REST 页面列表失败，回退到 resolver",
+            error,
+          );
+          result = await invokeRetry<ListPagesPayload, WikiPagesResponse>(
+            "listWikiPages",
+            {
+              pageIndex: target,
+              pageSize: targetConfig.limit,
+              spaceId: filters.spaceId || undefined,
+              parentId:
+                filters.relation === "parent"
+                  ? filters.relationPageId || undefined
+                  : undefined,
+              ancestorId:
+                filters.relation === "ancestor"
+                  ? filters.relationPageId || undefined
+                  : undefined,
+            },
+          );
+        }
       }
 
       const items = (Array.isArray(result.values) ? result.values : [])
@@ -276,15 +336,18 @@ export default function App() {
         )
         .filter((item): item is DynamicContentItem => item !== null);
       const sorted = sortItems(items, targetConfig.sort);
-      setResultItems(sorted);
+      setResultItems((current) => mergeById(current, sorted, append));
       setResultIndex(Number(result.page_index ?? target));
       setResultTotal(Number(result.total ?? 0));
       setResultError("");
       return sorted;
     } catch (error) {
-      setResultItems([]);
-      setResultIndex(target);
-      setResultTotal(0);
+      console.error("[dynamic-content] 结果加载失败", error);
+      if (!append) {
+        setResultItems([]);
+        setResultIndex(target);
+        setResultTotal(0);
+      }
       setResultError(error instanceof Error ? error.message : "动态内容加载失败");
       if (reportErrors) {
         setMessage(error instanceof Error ? error.message : "动态内容加载失败");
@@ -295,38 +358,51 @@ export default function App() {
     }
   }
 
-  async function loadPickList(pageIndex: number) {
+  async function loadPickList(pageIndex: number, append = false) {
     const target = Math.max(0, pageIndex);
     setPickLoading(true);
     setPickError("");
     try {
       if (!hasNexusBridge()) {
         const filtered = filterMockPages(config.pageFilters);
-        setPageList(paginate(filtered, target, PICK_PAGE_SIZE));
+        setPageList((current) =>
+          mergeById(current, paginate(filtered, target, PICK_PAGE_SIZE), append),
+        );
         setPickIndex(target);
         setPickTotal(filtered.length);
         return;
       }
-      const result = await invoke<ListPagesPayload, WikiPagesResponse>(
-        "listWikiPages",
-        {
-          pageIndex: target,
-          pageSize: PICK_PAGE_SIZE,
-          spaceId: config.pageFilters.spaceId || undefined,
-        },
-      );
-      setPageList(
-        (Array.isArray(result.values) ? result.values : [])
-          .map(normalizePageRef)
-          .filter((page): page is WikiPageRef => page !== null),
-      );
+      let result: WikiPagesResponse;
+      try {
+        result = await restJson<WikiPagesResponse>(
+          wikiPagesPath(target, PICK_PAGE_SIZE, {
+            spaceId: config.pageFilters.spaceId || undefined,
+          }),
+        );
+      } catch (error) {
+        console.warn("[dynamic-content] REST 页面列表失败，回退到 resolver", error);
+        result = await invokeRetry<ListPagesPayload, WikiPagesResponse>(
+          "listWikiPages",
+          {
+            pageIndex: target,
+            pageSize: PICK_PAGE_SIZE,
+            spaceId: config.pageFilters.spaceId || undefined,
+          },
+        );
+      }
+      const pages = (Array.isArray(result.values) ? result.values : [])
+        .map(normalizePageRef)
+        .filter((page): page is WikiPageRef => page !== null);
+      setPageList((current) => mergeById(current, pages, append));
       setPickIndex(Number(result.page_index ?? target));
       setPickTotal(Number(result.total ?? 0));
     } catch (error) {
-      setPageList([]);
-      setPickIndex(target);
-      setPickTotal(0);
-      setPickError(error instanceof Error ? error.message : "页面列表加载失败");
+      if (!append) {
+        setPageList([]);
+        setPickIndex(target);
+        setPickTotal(0);
+        setPickError(error instanceof Error ? error.message : "页面列表加载失败");
+      }
     } finally {
       setPickLoading(false);
     }
@@ -342,10 +418,18 @@ export default function App() {
         setSpaceOptionsTotal(MOCK_SPACES.length);
         return;
       }
-      const result = await invoke<ListSpacesPayload, WikiPagesResponse>(
-        "listWikiSpaces",
-        { pageIndex: target, pageSize: SPACE_OPTION_PAGE_SIZE },
-      );
+      let result: WikiPagesResponse;
+      try {
+        result = await restJson<WikiPagesResponse>(
+          wikiSpacesPath(target, SPACE_OPTION_PAGE_SIZE),
+        );
+      } catch (error) {
+        console.warn("[dynamic-content] REST 空间列表失败，回退到 resolver", error);
+        result = await invokeRetry<ListSpacesPayload, WikiPagesResponse>(
+          "listWikiSpaces",
+          { pageIndex: target, pageSize: SPACE_OPTION_PAGE_SIZE },
+        );
+      }
       setSpaceOptions(
         (Array.isArray(result.values) ? result.values : [])
           .map(normalizeSpace)
@@ -366,6 +450,7 @@ export default function App() {
     const next: DynamicContentConfig = { ...config, sourceType };
     setConfig(next);
     setStep("configure");
+    setTab("content");
     setPickingReference(false);
     setPageKeyword("");
     setMessage("");
@@ -430,10 +515,6 @@ export default function App() {
     void loadPickList(0);
   }
 
-  function cancelReferencePick() {
-    setPickingReference(false);
-  }
-
   function clearReference() {
     const next = {
       ...config,
@@ -472,7 +553,7 @@ export default function App() {
     setSaving(true);
     setMessage("");
     try {
-      const latestItems = await loadResults(resultIndex, config, true);
+      const latestItems = await loadResults(0, config, true);
       const nextConfig = {
         ...config,
         items: latestItems.length ? latestItems : config.items,
@@ -493,7 +574,7 @@ export default function App() {
   if (loading) {
     return (
       <div className="loading-state" role="status">
-        <LoaderCircle />
+        <LoaderCircle className="spin" size={18} />
         <span>正在加载动态内容</span>
       </div>
     );
@@ -501,20 +582,22 @@ export default function App() {
 
   if (mode === "view") {
     return (
-      <div className="view-shell">
-        {resultLoading && !displayItems.length ? (
-          <div className="empty-state">正在加载动态内容</div>
+      <main className="content-view">
+        {displayItems.length ? (
+          <ContentGrid config={config} items={displayItems} interactive />
         ) : (
-          <DynamicContentView config={config} items={displayItems} />
+          <div className="preview-empty">
+            {resultLoading ? "正在加载动态内容" : "暂无动态内容"}
+          </div>
         )}
-        <Pagination
-          index={resultIndex}
+        <LoadMore
+          loaded={displayItems.length}
           total={resultTotal}
-          pageSize={pageSize}
+          pageSize={config.limit}
           loading={resultLoading}
-          onChange={(pageIndex) => void loadResults(pageIndex, config, false)}
+          onChange={() => void loadResults(resultIndex + 1, config, true, true)}
         />
-      </div>
+      </main>
     );
   }
 
@@ -523,294 +606,382 @@ export default function App() {
   }
 
   return (
-    <main className="editor-shell">
+    <div className="editor-shell">
       <aside className="settings-panel">
-        <div className="settings-body">
-          {isSpaceMode ? (
-            <section className="filter-section" aria-label="空间过滤条件">
-              <div className="section-heading compact">
-                <h2>过滤条件</h2>
-                <p>按名称、可见范围筛选空间，结果即块内容。</p>
-              </div>
-              <label className="field">
-                <span>关键词</span>
-                <span className="input-with-icon">
-                  <Search aria-hidden="true" />
+        <div className="tabs">
+          <button
+            className={tab === "general" ? "active" : ""}
+            onClick={() => setTab("general")}
+          >
+            常规
+          </button>
+          <button
+            className={tab === "content" ? "active" : ""}
+            onClick={() => setTab("content")}
+          >
+            内容
+          </button>
+        </div>
+        <div className="settings-scroll">
+          {tab === "general" ? (
+            <>
+              <section className="settings-section">
+                <h2>展示方式</h2>
+                <div className="segments">
+                  <button
+                    className={config.display === "card" ? "active" : ""}
+                    onClick={() => update("display", "card")}
+                  >
+                    卡片
+                  </button>
+                  <button
+                    className={config.display === "list" ? "active" : ""}
+                    onClick={() => update("display", "list")}
+                  >
+                    列表
+                  </button>
+                </div>
+                {config.display === "card" && (
+                  <>
+                    <label className="field-label">对齐方式</label>
+                    <div className="segments">
+                      {(["left", "center", "right"] as const).map((value) => {
+                        const Icon =
+                          value === "left"
+                            ? AlignLeft
+                            : value === "center"
+                              ? AlignCenter
+                              : AlignRight;
+                        return (
+                          <button
+                            key={value}
+                            className={config.align === value ? "active" : ""}
+                            onClick={() => update("align", value)}
+                            aria-label={value}
+                          >
+                            <Icon size={18} />
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <label className="field-label">卡片类型</label>
+                    <div className="segments">
+                      <button
+                        className={config.cardType === "text" ? "active" : ""}
+                        onClick={() => update("cardType", "text")}
+                      >
+                        纯文本
+                      </button>
+                      <button
+                        className={config.cardType === "icon" ? "active" : ""}
+                        onClick={() => update("cardType", "icon")}
+                      >
+                        图标 + 文本
+                      </button>
+                    </div>
+                    <label className="field-label">列数</label>
+                    <div className="segments five">
+                      {([1, 2, 3, 4, 6] as const).map((value) => (
+                        <button
+                          key={value}
+                          className={config.columns === value ? "active" : ""}
+                          onClick={() => update("columns", value)}
+                        >
+                          {value}
+                        </button>
+                      ))}
+                    </div>
+                    <label className="field-label">悬浮效果</label>
+                    <select
+                      value={config.style}
+                      onChange={(event) =>
+                        update(
+                          "style",
+                          event.target.value as DynamicContentConfig["style"],
+                        )
+                      }
+                    >
+                      <option value="classic">无</option>
+                      <option value="hover">悬浮抬升</option>
+                      <option value="flip">翻转</option>
+                    </select>
+                    <label className="field-label">主色</label>
+                    <div className="color-field">
+                      <input
+                        type="color"
+                        value={config.accent}
+                        onChange={(event) => update("accent", event.target.value)}
+                      />
+                      <input
+                        value={config.accent}
+                        onChange={(event) =>
+                          update("accent", event.target.value)
+                        }
+                      />
+                    </div>
+                  </>
+                )}
+              </section>
+              <section className="settings-section">
+                <h2>尺寸与外观</h2>
+                <Range
+                  label="卡片间距"
+                  value={config.gap}
+                  min={0}
+                  max={40}
+                  onChange={(value) => update("gap", value)}
+                />
+                <Range
+                  label="内边距"
+                  value={config.padding}
+                  min={8}
+                  max={48}
+                  onChange={(value) => update("padding", value)}
+                />
+                <Range
+                  label="圆角"
+                  value={config.radius}
+                  min={0}
+                  max={24}
+                  onChange={(value) => update("radius", value)}
+                />
+                <label className="check-field">
+                  <input
+                    type="checkbox"
+                    checked={config.border}
+                    onChange={(event) => update("border", event.target.checked)}
+                  />
+                  描边
+                </label>
+                <label className="check-field">
+                  <input
+                    type="checkbox"
+                    checked={config.shadow}
+                    onChange={(event) => update("shadow", event.target.checked)}
+                  />
+                  阴影
+                </label>
+              </section>
+              <section className="settings-section">
+                <h2>内容信息</h2>
+                <label className="check-field">
+                  <input
+                    type="checkbox"
+                    checked={config.showExcerpt}
+                    onChange={(event) =>
+                      update("showExcerpt", event.target.checked)
+                    }
+                  />
+                  显示摘要
+                </label>
+                <label className="check-field">
+                  <input
+                    type="checkbox"
+                    checked={config.showMeta}
+                    onChange={(event) =>
+                      update("showMeta", event.target.checked)
+                    }
+                  />
+                  显示空间与更新时间
+                </label>
+              </section>
+            </>
+          ) : (
+            <>
+              {isSpaceMode ? (
+                <section className="settings-section">
+                  <h2>过滤条件</h2>
+                  <label className="field-label">关键词</label>
                   <input
                     type="search"
                     value={config.spaceFilters.keywords}
                     onChange={(event) => handleSpaceKeyword(event.target.value)}
                     placeholder="按空间名称搜索"
                   />
-                </span>
-              </label>
-              <label className="field">
-                <span>可见范围</span>
-                <select
-                  value={config.spaceFilters.scopeType}
-                  onChange={(event) =>
-                    handleSpaceScopeType(event.target.value as SpaceScopeType)
-                  }
-                >
-                  <option value="all">全部范围</option>
-                  <option value="organization">企业可见</option>
-                  <option value="user_group">团队可见</option>
-                  <option value="user">用户可见</option>
-                </select>
-              </label>
-              <label className="check-field">
-                <input
-                  type="checkbox"
-                  checked={config.spaceFilters.includeArchived}
-                  onChange={(event) =>
-                    handleIncludeArchived(event.target.checked)
-                  }
-                />
-                <span>包含已归档空间</span>
-              </label>
-            </section>
-          ) : (
-            <section className="filter-section" aria-label="页面过滤条件">
-              <div className="section-heading compact">
-                <h2>过滤条件</h2>
-                <p>按空间和页面位置筛选页面，结果即块内容。</p>
-              </div>
-              <label className="field">
-                <span>空间</span>
-                <select
-                  value={config.pageFilters.spaceId}
-                  disabled={spaceOptionsLoading}
-                  onChange={(event) => handlePageSpace(event.target.value)}
-                >
-                  <option value="">全部空间</option>
-                  {config.pageFilters.spaceId &&
-                    !spaceOptions.some(
-                      (space) => space.id === config.pageFilters.spaceId,
-                    ) && (
-                      <option value={config.pageFilters.spaceId}>
-                        {config.pageFilters.spaceName ||
-                          config.pageFilters.spaceId}
+                  <label className="field-label">可见范围</label>
+                  <select
+                    value={config.spaceFilters.scopeType}
+                    onChange={(event) =>
+                      handleSpaceScopeType(event.target.value as SpaceScopeType)
+                    }
+                  >
+                    <option value="all">全部范围</option>
+                    <option value="organization">企业可见</option>
+                    <option value="user_group">团队可见</option>
+                    <option value="user">用户可见</option>
+                  </select>
+                  <label className="check-field">
+                    <input
+                      type="checkbox"
+                      checked={config.spaceFilters.includeArchived}
+                      onChange={(event) =>
+                        handleIncludeArchived(event.target.checked)
+                      }
+                    />
+                    包含已归档空间
+                  </label>
+                </section>
+              ) : (
+                <section className="settings-section">
+                  <h2>过滤条件</h2>
+                  <label className="field-label">空间</label>
+                  <select
+                    value={config.pageFilters.spaceId}
+                    disabled={spaceOptionsLoading}
+                    onChange={(event) => handlePageSpace(event.target.value)}
+                  >
+                    <option value="">全部空间</option>
+                    {config.pageFilters.spaceId &&
+                      !spaceOptions.some(
+                        (space) => space.id === config.pageFilters.spaceId,
+                      ) && (
+                        <option value={config.pageFilters.spaceId}>
+                          {config.pageFilters.spaceName ||
+                            config.pageFilters.spaceId}
+                        </option>
+                      )}
+                    {spaceOptions.map((space) => (
+                      <option value={space.id} key={space.id}>
+                        {spaceLabel(space)}
                       </option>
-                    )}
-                  {spaceOptions.map((space) => (
-                    <option value={space.id} key={space.id}>
-                      {spaceLabel(space)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <div className="space-pagination" aria-label="空间选项分页">
-                <button
-                  className="icon-button"
-                  type="button"
-                  aria-label="上一页空间"
-                  disabled={spaceOptionsLoading || spaceOptionsIndex <= 0}
-                  onClick={() => void loadSpaceOptions(spaceOptionsIndex - 1)}
-                >
-                  <ChevronLeft />
-                </button>
-                <span>
-                  {spaceOptionsIndex + 1} /{" "}
-                  {Math.max(
-                    1,
-                    Math.ceil(spaceOptionsTotal / SPACE_OPTION_PAGE_SIZE),
-                  )}{" "}
-                  · {spaceOptionsTotal} 个空间
-                </span>
-                <button
-                  className="icon-button"
-                  type="button"
-                  aria-label="下一页空间"
-                  disabled={
-                    spaceOptionsLoading ||
-                    spaceOptionsIndex + 1 >=
-                      Math.ceil(spaceOptionsTotal / SPACE_OPTION_PAGE_SIZE)
-                  }
-                  onClick={() => void loadSpaceOptions(spaceOptionsIndex + 1)}
-                >
-                  <ChevronRight />
-                </button>
-              </div>
-              <label className="field">
-                <span>定位页面</span>
-                <select
-                  value={config.pageFilters.relation}
-                  onChange={(event) =>
-                    handlePageRelation(event.target.value as PageRelation)
-                  }
-                >
-                  <option value="none">不限</option>
-                  <option value="parent">某页面的直接子页面</option>
-                  <option value="ancestor">某页面的所有子孙页面</option>
-                </select>
-              </label>
-              {config.pageFilters.relation !== "none" && (
-                <div className="reference-box">
-                  <div>
-                    <span>参照页面</span>
-                    <strong>{referencePage?.name || "未选择"}</strong>
-                  </div>
-                  <div className="reference-actions">
-                    <button type="button" onClick={beginReferencePick}>
-                      {referencePage ? "重新选择" : "选择"}
+                    ))}
+                  </select>
+                  <div className="space-pagination" aria-label="空间选项分页">
+                    <button
+                      className="icon-button"
+                      type="button"
+                      aria-label="上一页空间"
+                      disabled={spaceOptionsLoading || spaceOptionsIndex <= 0}
+                      onClick={() => void loadSpaceOptions(spaceOptionsIndex - 1)}
+                    >
+                      <ChevronLeft size={16} />
                     </button>
-                    {referencePage && (
-                      <button type="button" onClick={clearReference}>
-                        清除
-                      </button>
-                    )}
+                    <span>
+                      {spaceOptionsIndex + 1} /{" "}
+                      {Math.max(
+                        1,
+                        Math.ceil(spaceOptionsTotal / SPACE_OPTION_PAGE_SIZE),
+                      )}{" "}
+                      · {spaceOptionsTotal} 个空间
+                    </span>
+                    <button
+                      className="icon-button"
+                      type="button"
+                      aria-label="下一页空间"
+                      disabled={
+                        spaceOptionsLoading ||
+                        spaceOptionsIndex + 1 >=
+                          Math.ceil(spaceOptionsTotal / SPACE_OPTION_PAGE_SIZE)
+                      }
+                      onClick={() => void loadSpaceOptions(spaceOptionsIndex + 1)}
+                    >
+                      <ChevronRight size={16} />
+                    </button>
                   </div>
-                </div>
+                  <label className="field-label">定位页面</label>
+                  <select
+                    value={config.pageFilters.relation}
+                    onChange={(event) =>
+                      handlePageRelation(event.target.value as PageRelation)
+                    }
+                  >
+                    <option value="none">不限</option>
+                    <option value="parent">某页面的直接子页面</option>
+                    <option value="ancestor">某页面的所有子孙页面</option>
+                  </select>
+                  {config.pageFilters.relation !== "none" && (
+                    <div className="reference-box">
+                      <div>
+                        <span>参照页面</span>
+                        <strong>{referencePage?.name || "未选择"}</strong>
+                      </div>
+                      <div className="reference-actions">
+                        <button type="button" onClick={beginReferencePick}>
+                          {referencePage ? "重新选择" : "选择"}
+                        </button>
+                        {referencePage && (
+                          <button type="button" onClick={clearReference}>
+                            清除
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </section>
               )}
-            </section>
-          )}
-
-          <div className="section-divider" />
-
-          <section className="display-section" aria-label="展示设置">
-            <div className="section-heading compact">
-              <h2>展示设置</h2>
-              <p>{querySummary(config)}</p>
-            </div>
-            <div className="field-grid">
-              <label className="field">
-                <span>展示</span>
-                <select
-                  value={config.display}
-                  onChange={(event) =>
-                    patchDisplay({
-                      display: event.target
-                        .value as DynamicContentConfig["display"],
-                    })
-                  }
-                >
-                  <option value="card">卡片</option>
-                  <option value="list">列表</option>
-                </select>
-              </label>
-              <label className="field">
-                <span>列数</span>
-                <select
-                  value={config.columns}
-                  onChange={(event) =>
-                    patchDisplay({
-                      columns: Number(event.target.value) as 1 | 2 | 3,
-                    })
-                  }
-                >
-                  <option value={1}>1 列</option>
-                  <option value={2}>2 列</option>
-                  <option value={3}>3 列</option>
-                </select>
-              </label>
-            </div>
-            <div className="field-grid">
-              <label className="field">
-                <span>排序</span>
+              <section className="settings-section">
+                <h2>排序与分页</h2>
+                <label className="field-label">排序</label>
                 <select
                   value={config.sort}
                   onChange={(event) =>
-                    patchDisplay({
-                      sort: event.target
-                        .value as DynamicContentConfig["sort"],
-                    })
+                    update(
+                      "sort",
+                      event.target.value as DynamicContentConfig["sort"],
+                    )
                   }
                 >
                   <option value="updated_desc">最近更新</option>
                   <option value="created_desc">最新创建</option>
                   <option value="title_asc">标题 A-Z</option>
                 </select>
-              </label>
-              <label className="field">
-                <span>每页条数</span>
+                <label className="field-label">每页条数</label>
                 <input
                   type="number"
                   min={1}
                   max={24}
                   value={config.limit}
                   onChange={(event) =>
-                    patchDisplay({
-                      limit: Math.min(
-                        24,
-                        Math.max(1, Number(event.target.value) || 1),
-                      ),
-                    })
+                    update(
+                      "limit",
+                      Math.min(24, Math.max(1, Number(event.target.value) || 1)),
+                    )
                   }
                 />
-              </label>
-            </div>
-            <label className="check-field">
-              <input
-                type="checkbox"
-                checked={config.showExcerpt}
-                onChange={(event) =>
-                  patchDisplay({ showExcerpt: event.target.checked })
-                }
-              />
-              <span>显示摘要</span>
-            </label>
-            <label className="check-field">
-              <input
-                type="checkbox"
-                checked={config.showMeta}
-                onChange={(event) =>
-                  patchDisplay({ showMeta: event.target.checked })
-                }
-              />
-              <span>显示空间与更新时间</span>
-            </label>
-          </section>
+              </section>
+            </>
+          )}
         </div>
       </aside>
 
-      <section className="browser-panel" aria-label="动态内容结果">
-        <header className="browser-header">
-          <div className="browser-heading">
-            <h2>{pickingReference ? "选择参照页面" : "结果预览"}</h2>
-            <p>
-              {(pickingReference ? pickLoading : resultLoading)
-                ? "正在加载"
-                : pickingReference
-                  ? `共 ${pickTotal} 个页面`
-                  : `共 ${resultTotal} 条${isSpaceMode ? "空间" : "页面"}`}
-            </p>
-          </div>
-          <button
-            className="icon-button"
-            type="button"
-            aria-label="刷新"
-            title="刷新"
-            disabled={pickingReference ? pickLoading : resultLoading}
-            onClick={() =>
-              pickingReference
-                ? void loadPickList(pickIndex)
-                : void loadResults(resultIndex, config, true)
-            }
-          >
-            <RefreshCw
-              className={(pickingReference ? pickLoading : resultLoading) ? "spin" : ""}
-            />
-          </button>
-        </header>
-
-        {pickingReference && (
-          <div className="pick-banner" role="status">
-            <span>
-              请选择作为
-              {config.pageFilters.relation === "parent" ? "父页面" : "祖先页面"}
-              的页面
-            </span>
-            <button type="button" onClick={cancelReferencePick}>
-              取消
-            </button>
-          </div>
-        )}
-
-        <div className="browser-body">
+      <main className="preview-panel">
+        <div className="preview-heading">
+          <span>{pickingReference ? "选择参照页面" : "预览"}</span>
+          <span className="preview-meta">
+            {pickingReference
+              ? pickLoading
+                ? "加载中…"
+                : `共 ${pickTotal} 个页面`
+              : resultLoading
+                ? "加载中…"
+                : `共 ${resultTotal} 条`}
+            {pickingReference ? (
+              <button
+                className="text-button"
+                type="button"
+                onClick={() => setPickingReference(false)}
+              >
+                取消
+              </button>
+            ) : (
+              <button
+                className="icon-button"
+                type="button"
+                aria-label="刷新"
+                title="刷新"
+                disabled={resultLoading}
+                onClick={() => void loadResults(0, config, true)}
+              >
+                <RefreshCw className={resultLoading ? "spin" : ""} size={15} />
+              </button>
+            )}
+          </span>
+        </div>
+        <div className="preview-canvas">
           {pickingReference ? (
-            <>
-              <label className="search-field">
-                <Search aria-hidden="true" />
+            <div className="preview-content pick-list">
+              <label className="picker-search">
+                <Search size={16} />
                 <input
                   type="search"
                   value={pageKeyword}
@@ -819,150 +990,298 @@ export default function App() {
                 />
               </label>
               {pickLoading ? (
-                <div className="list-state" role="status">
-                  <LoaderCircle className="spin" />
+                <div className="preview-empty">
+                  <LoaderCircle className="spin" size={18} />
                   <span>正在加载页面列表</span>
                 </div>
               ) : pickError ? (
-                <div className="list-state error">{pickError}</div>
+                <div className="preview-empty error">{pickError}</div>
               ) : filteredPageList.length ? (
-                <div className="source-list">
+                <div className="page-list">
                   {filteredPageList.map((page) => (
                     <button
                       type="button"
-                      className={`source-row${
+                      className={`page-option${
                         referencePage?.id === page.id ? " selected" : ""
                       }`}
                       key={page.id}
                       onClick={() => chooseReferencePage(page)}
                     >
-                      <span className="row-icon">
-                        <FileText />
+                      <span className="page-icon">
+                        <FileText size={16} />
                       </span>
-                      <span className="row-copy">
-                        <span className="row-title">{page.name}</span>
+                      <span className="page-copy">
+                        <strong>{page.name}</strong>
                         <small>
                           {[page.spaceName, formatDate(page.updatedAt)]
                             .filter(Boolean)
                             .join(" · ") || page.id}
                         </small>
                       </span>
-                      <span className="row-state">
-                        <ChevronRight aria-hidden="true" />
-                      </span>
+                      <ChevronRight size={15} className="page-arrow" />
                     </button>
                   ))}
                 </div>
               ) : (
-                <div className="list-state">没有符合条件的页面</div>
+                <div className="preview-empty">没有符合条件的页面</div>
               )}
-              <Pagination
-                index={pickIndex}
+              <LoadMore
+                loaded={pageList.length}
                 total={pickTotal}
                 pageSize={PICK_PAGE_SIZE}
                 loading={pickLoading}
-                onChange={(pageIndex) => void loadPickList(pageIndex)}
+                onChange={() => void loadPickList(pickIndex + 1, true)}
               />
-            </>
-          ) : resultError && !displayItems.length ? (
-            <div className="list-state error">
-              <span>{resultError}</span>
-              <button
-                className="retry-button"
-                type="button"
-                onClick={() => void loadResults(resultIndex, config, true)}
-              >
-                重试
-              </button>
-            </div>
-          ) : resultLoading && !displayItems.length ? (
-            <div className="list-state" role="status">
-              <LoaderCircle className="spin" />
-              <span>正在加载动态内容</span>
             </div>
           ) : (
-            <>
-              <div className="preview-wrap">
-                <DynamicContentView
-                  config={config}
-                  items={displayItems}
-                  editable
-                />
-              </div>
-              <Pagination
-                index={resultIndex}
+            <div className="preview-content">
+              {resultError && !displayItems.length ? (
+                <div className="preview-empty error">
+                  <span>{resultError}</span>
+                  <div className="error-actions">
+                    <button
+                      type="button"
+                      onClick={() => void loadResults(0, config, true)}
+                    >
+                      重试
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void refreshSession()}
+                    >
+                      重新加载
+                    </button>
+                  </div>
+                </div>
+              ) : resultLoading && !displayItems.length ? (
+                <div className="preview-empty">
+                  <LoaderCircle className="spin" size={18} />
+                  <span>正在加载动态内容</span>
+                </div>
+              ) : displayItems.length ? (
+                <ContentGrid config={config} items={displayItems} />
+              ) : (
+                <div className="preview-empty">没有符合条件的内容</div>
+              )}
+              <LoadMore
+                loaded={resultItems.length}
                 total={resultTotal}
-                pageSize={pageSize}
+                pageSize={config.limit}
                 loading={resultLoading}
-                onChange={(pageIndex) =>
-                  void loadResults(pageIndex, config, false)
+                onChange={() =>
+                  void loadResults(resultIndex + 1, config, true, true)
                 }
               />
-            </>
+            </div>
           )}
         </div>
+      </main>
 
-        <footer className="editor-footer">
-          {message && <span className="message">{message}</span>}
-          <button
-            className="cancel-button"
-            type="button"
-            onClick={() => (hasNexusBridge() ? void view.close() : setMessage(""))}
-          >
-            取消
-          </button>
-          <button
-            className="save-button"
-            type="button"
-            disabled={saving}
-            onClick={() => void save()}
-          >
-            <Save />
-            <span>{saving ? "保存中" : "保存"}</span>
-          </button>
-        </footer>
-      </section>
-    </main>
+      <footer className="editor-footer">
+        {message && <span className="editor-error">{message}</span>}
+        <button
+          onClick={() => (hasNexusBridge() ? void view.close() : setMessage(""))}
+        >
+          取消
+        </button>
+        <button
+          className="primary"
+          disabled={saving}
+          onClick={() => void save()}
+        >
+          {saving ? "保存中…" : "保存"}
+        </button>
+      </footer>
+    </div>
   );
 }
 
-function Pagination({
-  index,
+function ContentGrid({
+  config,
+  items,
+  interactive = false,
+}: {
+  config: DynamicContentConfig;
+  items: DynamicContentItem[];
+  interactive?: boolean;
+}) {
+  const columns = Math.max(1, Math.min(config.columns, items.length || 1));
+  return (
+    <div
+      className={`content-grid display-${config.display}`}
+      style={{
+        gridTemplateColumns:
+          config.display === "list"
+            ? "1fr"
+            : `repeat(${columns}, minmax(0, 1fr))`,
+        gap: config.gap,
+      }}
+    >
+      {items.map((item) => (
+        <ContentCard
+          key={item.id}
+          config={config}
+          item={item}
+          interactive={interactive}
+        />
+      ))}
+    </div>
+  );
+}
+
+function ContentCard({
+  config,
+  item,
+  interactive,
+}: {
+  config: DynamicContentConfig;
+  item: DynamicContentItem;
+  interactive: boolean;
+}) {
+  const Icon = item.resourceType === "space" ? Layers : FileText;
+  const href = item.htmlUrl && item.htmlUrl !== "#" ? item.htmlUrl : null;
+  const style = {
+    borderRadius: config.radius,
+    border: config.border ? "1px solid #e6e9f0" : "1px solid transparent",
+    boxShadow: config.shadow ? "0 1px 3px rgba(25, 34, 51, .07)" : "none",
+    textAlign: config.align,
+    "--accent": config.accent,
+  } as CSSProperties;
+  const meta = [
+    item.resourceType === "space" ? item.identifier : item.spaceName,
+    formatDate(item.updatedAt),
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  const showIcon = config.display === "list" || config.cardType === "icon";
+
+  const front = (
+    <div
+      className="card-body"
+      style={{
+        padding: config.padding,
+        alignItems:
+          config.display === "list"
+            ? "center"
+            : config.align === "left"
+              ? "flex-start"
+              : config.align === "right"
+                ? "flex-end"
+                : "center",
+      }}
+    >
+      {showIcon && (
+        <span className="card-icon">
+          <Icon size={20} />
+        </span>
+      )}
+      <span className="card-text">
+        <strong>
+          {item.name}
+          {href && <ArrowUpRight size={12} className="card-external" />}
+        </strong>
+        {config.showExcerpt && item.description && <p>{item.description}</p>}
+        {config.showMeta && meta && <small className="card-meta">{meta}</small>}
+      </span>
+    </div>
+  );
+
+  const flip = config.style === "flip" && config.display === "card";
+
+  return (
+    <div
+      className={`content-card effect-${config.style} display-${config.display}`}
+      style={style}
+    >
+      {flip ? (
+        <div className="card-flip-inner">
+          <div className="card-face card-front">{front}</div>
+          <div className="card-face card-back">
+            <strong>{item.name}</strong>
+            {item.description && <p>{item.description}</p>}
+            {config.showMeta && meta && <small className="card-meta">{meta}</small>}
+          </div>
+        </div>
+      ) : (
+        front
+      )}
+      {interactive && href && (
+        <a
+          className="card-hit-area"
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={item.name}
+        />
+      )}
+    </div>
+  );
+}
+
+function Range({
+  label,
+  value,
+  min,
+  max,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  onChange: (value: number) => void;
+}) {
+  return (
+    <label className="range-field">
+      <span>{label}</span>
+      <div>
+        <input
+          type="range"
+          min={min}
+          max={max}
+          value={value}
+          onChange={(event) => onChange(Number(event.target.value))}
+        />
+        <input
+          type="number"
+          min={min}
+          max={max}
+          value={value}
+          onChange={(event) =>
+            onChange(Math.max(min, Math.min(max, Number(event.target.value))))
+          }
+        />
+        <small>px</small>
+      </div>
+    </label>
+  );
+}
+
+function LoadMore({
+  loaded,
   total,
   pageSize,
   loading,
   onChange,
 }: {
-  index: number;
+  loaded: number;
   total: number;
   pageSize: number;
   loading: boolean;
-  onChange: (pageIndex: number) => void;
+  onChange: () => void;
 }) {
-  const pageCount = Math.max(1, Math.ceil(total / pageSize));
-  if (total <= pageSize) return null;
+  if (total <= 0) return null;
+  if (loaded >= total) {
+    return total > pageSize ? (
+      <div className="load-more">
+        <span>已加载全部 {total} 条</span>
+      </div>
+    ) : null;
+  }
   return (
-    <div className="list-pagination" aria-label="结果分页">
-      <button
-        className="icon-button"
-        type="button"
-        aria-label="上一页"
-        disabled={loading || index <= 0}
-        onClick={() => onChange(index - 1)}
-      >
-        <ChevronLeft />
-      </button>
-      <span>
-        第 {Math.min(index + 1, pageCount)} / {pageCount} 页 · 共 {total} 条
-      </span>
-      <button
-        className="icon-button"
-        type="button"
-        aria-label="下一页"
-        disabled={loading || index + 1 >= pageCount}
-        onClick={() => onChange(index + 1)}
-      >
-        <ChevronRight />
+    <div className="load-more">
+      <button type="button" disabled={loading} onClick={onChange}>
+        {loading ? "加载中…" : `加载更多（${loaded}/${total}）`}
       </button>
     </div>
   );
@@ -976,13 +1295,8 @@ function SourceTypeChooser({
   return (
     <main className="chooser-shell">
       <header className="chooser-header">
-        <span className="brand-mark">
-          <Layers />
-        </span>
-        <div>
-          <h1>Myriad - Dynamic Content</h1>
-          <p>选择动态内容的数据来源</p>
-        </div>
+        <h1>Myriad - Dynamic Content</h1>
+        <p>选择动态内容的数据来源</p>
       </header>
 
       <div className="chooser-cards">
@@ -992,7 +1306,7 @@ function SourceTypeChooser({
           onClick={() => onChoose("space")}
         >
           <span className="chooser-icon">
-            <Layers />
+            <Layers size={20} />
           </span>
           <strong>空间</strong>
           <span className="chooser-copy">
@@ -1000,7 +1314,7 @@ function SourceTypeChooser({
           </span>
           <span className="chooser-cta">
             开始配置
-            <ChevronRight />
+            <ChevronRight size={14} />
           </span>
         </button>
         <button
@@ -1009,7 +1323,7 @@ function SourceTypeChooser({
           onClick={() => onChoose("page")}
         >
           <span className="chooser-icon">
-            <FileText />
+            <FileText size={20} />
           </span>
           <strong>页面</strong>
           <span className="chooser-copy">
@@ -1017,7 +1331,7 @@ function SourceTypeChooser({
           </span>
           <span className="chooser-cta">
             开始配置
-            <ChevronRight />
+            <ChevronRight size={14} />
           </span>
         </button>
       </div>
@@ -1036,125 +1350,149 @@ function SourceTypeChooser({
   );
 }
 
-function DynamicContentView({
-  config,
-  items,
-  editable = false,
-}: {
-  config: DynamicContentConfig;
-  items: DynamicContentItem[];
-  editable?: boolean;
-}) {
-  return (
-    <section
-      className={`dynamic-content display-${config.display} columns-${config.columns}`}
-    >
-      {items.length ? (
-        <div className="content-grid">
-          {items.map((item) => (
-            <ContentCard config={config} item={item} key={item.id} />
-          ))}
-        </div>
-      ) : (
-        <div className="empty-state">
-          {editable ? "没有符合条件的内容" : "暂无动态内容"}
-        </div>
-      )}
-    </section>
+function wikiSpacesPath(
+  pageIndex: number,
+  pageSize: number,
+  filters?: SpaceFilters,
+): string {
+  const params = new URLSearchParams({
+    page_index: String(pageIndex),
+    page_size: String(pageSize),
+  });
+  if (filters) {
+    const keywords = filters.keywords.trim();
+    if (keywords) params.set("keywords", keywords);
+    if (filters.scopeType !== "all") {
+      params.set("scope_type", filters.scopeType);
+    }
+    if (filters.includeArchived) params.set("include_archived", "true");
+  }
+  return `/v2/wiki/spaces?${params.toString()}`;
+}
+
+function wikiPagesPath(
+  pageIndex: number,
+  pageSize: number,
+  filters?: { spaceId?: string; parentId?: string; ancestorId?: string },
+): string {
+  const params = new URLSearchParams({
+    page_index: String(pageIndex),
+    page_size: String(pageSize),
+  });
+  if (filters?.spaceId) params.set("space_id", filters.spaceId);
+  if (filters?.parentId) params.set("parent_id", filters.parentId);
+  if (filters?.ancestorId) params.set("ancestor_id", filters.ancestorId);
+  return `/v2/wiki/pages?${params.toString()}`;
+}
+
+/**
+ * Calls PingCode REST through the host's `apiInvoke` bridge channel. This is
+ * independent from `invokeFunction`, which can be left on a closed connection
+ * when the host reopens an editor dialog.
+ */
+async function restJson<TResult>(path: string): Promise<TResult> {
+  const response = await api.invoke(path);
+  if (!response.ok) {
+    let message = `接口请求失败 (${response.status})`;
+    try {
+      const payload = (await response.json()) as Record<string, unknown>;
+      message = String(payload["message"] ?? payload["error"] ?? message);
+    } catch {
+      // Keep the default message when the body is not JSON.
+    }
+    throw new Error(message);
+  }
+  return (await response.json()) as TResult;
+}
+
+let lastInvokeFailure: unknown = null;
+
+const RELOAD_GUARD_KEY = "myriad-dynamic-content:last-reload";
+
+function isConnectionError(error: unknown): boolean {
+  const message = String(
+    (error as { message?: unknown })?.message ?? error ?? "",
+  );
+  return /ERR_CONNECTION|ERR_NETWORK|ECONNRESET|Failed to fetch|NetworkError/i.test(
+    message,
   );
 }
 
-function ContentCard({
-  config,
-  item,
-}: {
-  config: DynamicContentConfig;
-  item: DynamicContentItem;
-}) {
-  const meta = [
-    item.resourceType === "space" ? item.identifier : item.spaceName,
-    formatDate(item.updatedAt),
-  ]
-    .filter(Boolean)
-    .join(" · ");
+async function refreshSession(): Promise<void> {
+  // Ask the host to recreate the view, which re-mints the context token and
+  // re-establishes the invoke connection.
+  if (hasNexusBridge()) {
+    try {
+      await view.refresh();
+      return;
+    } catch {
+      // The view is not refreshable — fall back to reloading the document.
+    }
+  }
+  window.location.reload();
+}
 
-  const content = (
-    <>
-      <span className="item-icon">
-        {item.resourceType === "space" ? (
-          <Layers />
-        ) : config.display === "list" ? (
-          <List />
-        ) : (
-          <FileText />
-        )}
-      </span>
-      <span className="item-copy">
-        <strong>{item.name}</strong>
-        {config.showExcerpt && item.description && (
-          <span>{item.description}</span>
-        )}
-        {config.showMeta && meta && <small>{meta}</small>}
-      </span>
-      {item.htmlUrl && item.htmlUrl !== "#" && (
-        <span className="item-link" aria-hidden="true">
-          <ExternalLink />
-        </span>
-      )}
-    </>
-  );
+function reloadForFreshSession(): void {
+  try {
+    const last = Number(window.sessionStorage.getItem(RELOAD_GUARD_KEY) ?? "0");
+    // Avoid a reload loop when the host still cannot provide a token.
+    if (Date.now() - last < 5000) return;
+    window.sessionStorage.setItem(RELOAD_GUARD_KEY, String(Date.now()));
+  } catch {
+    return;
+  }
+  void refreshSession();
+}
 
-  return item.htmlUrl && item.htmlUrl !== "#" ? (
-    <a
-      className="content-item"
-      href={item.htmlUrl}
-      target="_blank"
-      rel="noreferrer"
-    >
-      {content}
-    </a>
-  ) : (
-    <article className="content-item">{content}</article>
-  );
+async function invokeRetry<TPayload, TResult>(
+  name: string,
+  payload: TPayload,
+  attempts = 5,
+  delayMs = 500,
+): Promise<TResult> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    try {
+      const result = await invoke<TPayload, TResult>(name, payload);
+      lastInvokeFailure = null;
+      return result;
+    } catch (error) {
+      lastError = error;
+      lastInvokeFailure = error;
+      const tunnelToken = (
+        window as unknown as { __TUNNEL_TOKEN__?: string }
+      ).__TUNNEL_TOKEN__;
+      console.warn(
+        `[dynamic-content] invoke ${name} 第 ${attempt + 1} 次失败`,
+        { error, hasTunnelToken: Boolean(tunnelToken) },
+      );
+      if (attempt < attempts - 1) {
+        await new Promise((resolve) =>
+          setTimeout(resolve, delayMs * (attempt + 1)),
+        );
+      }
+    }
+  }
+  throw lastError;
 }
 
 function spaceLabel(space: WikiSpace): string {
   return space.name || space.identifier || space.id;
 }
 
-function scopeLabel(scopeType: SpaceScopeType): string {
-  if (scopeType === "organization") return "企业可见";
-  if (scopeType === "user_group") return "团队可见";
-  if (scopeType === "user") return "用户可见";
-  return "全部范围";
-}
-
-function querySummary(config: DynamicContentConfig): string {
-  if (config.sourceType === "space") {
-    const parts = [scopeLabel(config.spaceFilters.scopeType)];
-    const keywords = config.spaceFilters.keywords.trim();
-    if (keywords) parts.push(`关键词“${keywords}”`);
-    if (config.spaceFilters.includeArchived) parts.push("含已归档");
-    return `空间 · ${parts.join(" · ")}`;
-  }
-  const parts = [config.pageFilters.spaceName || "全部空间"];
-  if (config.pageFilters.relation !== "none") {
-    const relationLabel =
-      config.pageFilters.relation === "parent" ? "直接子页面" : "所有子孙页面";
-    parts.push(
-      config.pageFilters.relationPageName
-        ? `${config.pageFilters.relationPageName} 的${relationLabel}`
-        : relationLabel,
-    );
-  } else {
-    parts.push("全部页面");
-  }
-  return `页面 · ${parts.join(" · ")}`;
-}
-
 function paginate<T>(values: T[], pageIndex: number, pageSize: number): T[] {
   const start = Math.max(0, pageIndex) * pageSize;
   return values.slice(start, start + pageSize);
+}
+
+function mergeById<T extends { id: string }>(
+  current: T[],
+  next: T[],
+  append: boolean,
+): T[] {
+  if (!append) return next;
+  const seen = new Set(current.map((item) => item.id));
+  return [...current, ...next.filter((item) => !seen.has(item.id))];
 }
 
 function mockResults(
