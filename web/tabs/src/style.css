@@ -148,7 +148,10 @@ button {
   display: flex;
   gap: 20px;
   padding: 0 20px;
-  border-bottom: 1px solid #e7eaf0;
+  background-image: linear-gradient(#e7eaf0, #e7eaf0);
+  background-position: center bottom;
+  background-repeat: no-repeat;
+  background-size: calc(100% - 40px) 1px;
   overflow-x: auto;
 }
 

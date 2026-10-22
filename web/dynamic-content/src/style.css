@@ -76,11 +76,11 @@ button {
   flex: 0 0 54px;
   align-items: stretch;
   gap: 24px;
-  padding: 0 22px;
+  padding: 0 20px;
   background-image: linear-gradient(#e7eaf0, #e7eaf0);
   background-position: center bottom;
   background-repeat: no-repeat;
-  background-size: calc(100% - 44px) 1px;
+  background-size: calc(100% - 40px) 1px;
 }
 
 .tabs button {
@@ -100,7 +100,7 @@ button {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: 0 22px 24px;
+  padding: 0 20px 24px;
 }
 
 .settings-section {
