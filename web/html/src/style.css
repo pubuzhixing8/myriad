@@ -114,26 +114,10 @@ button {
   color: #647388;
 }
 
-.segments button.active,
-.preset-chips button.active {
+.segments button.active {
   border-color: #7591ff;
   background: #f3f6ff;
   color: #4167f1;
-}
-
-.preset-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 7px;
-}
-
-.preset-chips button {
-  padding: 6px 10px;
-  border: 1px solid #dce2eb;
-  border-radius: 6px;
-  background: #fff;
-  color: #536174;
-  font-size: 12px;
 }
 
 .hint {
@@ -203,8 +187,8 @@ button {
   display: flex;
   min-height: 0;
   flex: 1;
-  align-items: center;
-  justify-content: center;
+  align-items: safe center;
+  justify-content: safe center;
   overflow: auto;
   padding: 32px 5%;
 }
@@ -233,6 +217,7 @@ button {
 .html-shell iframe {
   display: block;
   width: 100%;
+  height: 100%;
   border: 0;
   background: #fff;
 }
@@ -267,6 +252,7 @@ button {
 .url-placeholder {
   display: grid;
   width: 100%;
+  height: 100%;
   place-items: center;
   background: repeating-linear-gradient(
     45deg,

@@ -8,53 +8,9 @@ export interface EmbedHtmlConfig {
   sanitize: boolean;
   showBorder: boolean;
   scrolling: Scrolling;
+  height: number;
   docTitle: string;
 }
-
-export const PRESETS: { nameZh: string; nameEn: string; code: string }[] = [
-  {
-    nameZh: "进度卡片",
-    nameEn: "Progress card",
-    code: [
-      '<div style="font-family:-apple-system,system-ui,sans-serif;padding:22px;background:linear-gradient(135deg,#eef4ff,#f8faff);border-radius:12px">',
-      '  <div style="font-size:12px;color:#5a6270">本周迭代完成度</div>',
-      '  <div style="font-size:30px;font-weight:700;color:#1f2329;margin:4px 0 12px">78%</div>',
-      '  <div style="height:8px;background:#dde5f5;border-radius:4px;overflow:hidden">',
-      '    <div style="width:78%;height:100%;background:#2b6cf0;border-radius:4px"></div>',
-      "  </div>",
-      "</div>",
-    ].join("\n"),
-  },
-  {
-    nameZh: "交互计数器",
-    nameEn: "Interactive counter",
-    code: [
-      '<div style="font-family:-apple-system,system-ui,sans-serif;padding:18px;text-align:center">',
-      '  <div id="n" style="font-size:34px;font-weight:700;color:#1f2329">0</div>',
-      "  <button onclick=\"var e=document.getElementById('n');e.textContent=(+e.textContent)+1\"",
-      '    style="margin-top:10px;padding:8px 18px;border:0;border-radius:8px;background:#2b6cf0;color:#fff;font-size:13px;cursor:pointer">',
-      "    点击 +1</button>",
-      "</div>",
-    ].join("\n"),
-  },
-  {
-    nameZh: "数据表格",
-    nameEn: "Data table",
-    code: [
-      '<div style="font-family:-apple-system,system-ui,sans-serif;padding:10px">',
-      '  <table style="width:100%;border-collapse:collapse;font-size:13px">',
-      '    <tr style="background:#f7f8f9;color:#5a6270">',
-      '      <th style="text-align:left;padding:8px;font-weight:500">扩展点</th>',
-      '      <th style="text-align:left;padding:8px;font-weight:500">状态</th></tr>',
-      '    <tr><td style="padding:8px;border-top:1px solid #eef0f3">背景内容</td>',
-      '      <td style="padding:8px;border-top:1px solid #eef0f3;color:#12a06a">已接入</td></tr>',
-      '    <tr><td style="padding:8px;border-top:1px solid #eef0f3">卡片</td>',
-      '      <td style="padding:8px;border-top:1px solid #eef0f3;color:#12a06a">已接入</td></tr>',
-      "  </table>",
-      "</div>",
-    ].join("\n"),
-  },
-];
 
 export const DEFAULT_CONFIG: EmbedHtmlConfig = {
   mode: "code",
@@ -69,6 +25,7 @@ export const DEFAULT_CONFIG: EmbedHtmlConfig = {
   sanitize: true,
   showBorder: true,
   scrolling: "auto",
+  height: 640,
   docTitle: "自定义内容",
 };
 
@@ -90,6 +47,10 @@ export function normalizeConfig(value: unknown): EmbedHtmlConfig {
       source.scrolling === "yes" || source.scrolling === "no"
         ? source.scrolling
         : "auto",
+    height:
+      typeof source.height === "number" && Number.isFinite(source.height)
+        ? Math.max(200, Math.min(1000, Math.round(source.height)))
+        : DEFAULT_CONFIG.height,
     docTitle:
       typeof source.docTitle === "string"
         ? source.docTitle
