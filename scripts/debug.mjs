@@ -1,8 +1,53 @@
 import { spawn } from "node:child_process";
+import { readFileSync, writeFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+
+const customUis = [
+  { name: "Button UI", directory: "web/button", resource: "button", port: 3101 },
+  {
+    name: "Background UI",
+    directory: "web/background",
+    resource: "background-editor",
+    port: 3102,
+  },
+  {
+    name: "Dynamic Content UI",
+    directory: "web/dynamic-content",
+    resource: "dynamic-content",
+    port: 3103,
+  },
+  { name: "Cards UI", directory: "web/cards", resource: "card-grid", port: 3104 },
+  { name: "Embed HTML UI", directory: "web/html", resource: "embed-html", port: 3105 },
+  { name: "Embed UI", directory: "web/embed", resource: "embed", port: 3106 },
+  { name: "Tabs UI", directory: "web/tabs", resource: "tabs-editor", port: 3107 },
+];
+
+const configPath = fileURLToPath(new URL("../nexus.json", import.meta.url));
+let config;
+
+try {
+  config = JSON.parse(readFileSync(configPath, "utf8"));
+} catch (error) {
+  console.error(`无法读取本地 Nexus 配置：${configPath}`);
+  console.error(error);
+  process.exit(1);
+}
+
+config.serve ??= {};
+config.serve.resources ??= {};
+
+for (const { resource, port } of customUis) {
+  config.serve.resources[resource] = { port };
+}
+
+writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`);
 
 const services = [
-  ["Background UI", "dev:background"],
-  ["Nexus tunnel", "debug:nexus"],
+  ...customUis.map(({ name, directory, port }) => ({
+    name,
+    args: ["run", "dev", "--prefix", directory, "--", "--port", String(port), "--strictPort"],
+  })),
+  { name: "Nexus tunnel", args: ["run", "debug:nexus"] },
 ];
 
 const children = [];
@@ -30,8 +75,8 @@ function stop(signal = "SIGINT") {
   }
 }
 
-for (const [name, script] of services) {
-  const child = spawn("npm", ["run", script], {
+for (const { name, args } of services) {
+  const child = spawn("npm", args, {
     stdio: "inherit",
     detached: true,
   });

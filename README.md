@@ -45,7 +45,7 @@ Inserting the block first asks for a source type, then opens a settings page wit
 
 Display settings mirror the Cards block: card/list layout, alignment, card type (text / icon + text / image + text), 1–6 columns, hover effect (none / elevate / flip), image height and fit, an image series picked from `web/dynamic-content/public/background` (random per item, also used as list icons), accent color, gap / padding / radius / border / shadow, excerpts, metadata, sorting, and items per page (also used as page size). The left pane holds filters and display settings; the right pane previews exactly what the saved block will render, appending more results through a "load more" button. Both the editor and saved blocks fetch data through the Nexus REST gateway (`api.invoke` → `/api/nexus/gateway/rest-api/invoke`) using the saved settings — only the settings are persisted, never the result items. Open `http://127.0.0.1:3102/` during local development, or add `?mode=view` for its saved-block view.
 
-## Background 本地调试
+## 本地调试
 
 使用 Node.js 24 或更新版本。只查看编辑页面时，在项目根目录运行：
 
@@ -65,13 +65,13 @@ nexus variables set --encrypt -e development PIXABAY_API_KEY
 
 本地 Nexus 调试会读取 development 环境中已设置的加密变量。项目的 `npm run debug:nexus` 使用修正了变量覆盖问题的 Nexus CLI 版本；无需在本地文件或命令行中再次写入 Key。
 
-要在已部署并安装到测试站点的 development 应用里调试，先在本地 `nexus.json` 的 `serve.resources` 中配置 `background-editor` 的端口为 `3102`，然后运行：
+要在已部署并安装到测试站点的 development 应用里调试，确保本地 `nexus.json` 已指向目标 Nexus 平台，然后运行：
 
 ```bash
 npm run debug
 ```
 
-这个命令会同时启动 Background 前端和 Nexus 调试隧道；按 Ctrl+C 会一起停止。首次启动 Nexus 调试可能需要在终端完成测试账号绑定。
+这个命令会为 Button、Background、Dynamic Content、Cards、Embed HTML、Embed 和 Tabs 启动各自的前端服务，并自动更新本地 `nexus.json` 的资源端口映射，再启动 Nexus 调试隧道。端口依次为 3101–3107；按 Ctrl+C 会一起停止。修改调试映射后，需要重启该命令。首次启动 Nexus 调试可能需要在终端完成测试账号绑定。
 
 `nexus.json` 是个人本地配置，不提交到 Git。改动 `manifest.yaml` 后仍需重新部署；新增 Pixabay 后端请求权限后，还需重新分发并由企业管理员确认权限。首次调试还需完成分发、企业管理员安装和测试账号绑定。
 
