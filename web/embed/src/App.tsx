@@ -23,7 +23,6 @@ function EmbedFrame({ config, preview, load }: { config: EmbedConfig; preview: b
       <div className={`embed-frame ${config.showBorder ? "with-border" : ""}`} style={{ height: config.height }}>
         <div className="embed-topbar">
           <strong>{source.name}</strong>
-          <span>iframe</span>
           {src && (
             <a
               href={config.url}

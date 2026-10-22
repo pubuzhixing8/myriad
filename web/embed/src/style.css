@@ -166,14 +166,6 @@ button {
   font-size: 12px;
 }
 
-.embed-topbar span {
-  padding: 2px 6px;
-  border: 1px solid #e4e7eb;
-  border-radius: 4px;
-  color: #9aa2af;
-  font-family: monospace;
-}
-
 .embed-topbar a {
   display: inline-flex;
   align-items: center;
