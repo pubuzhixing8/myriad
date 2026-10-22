@@ -692,33 +692,37 @@ export default function App() {
           </label>
           <label>
             <span>{t("color")}</span>
-            <select
-              value={color}
-              onChange={(event) => {
-                setColor(event.target.value);
-                setPage(1);
-              }}
-            >
-              {COLORS.map((item) => (
-                <option key={item} value={item}>
-                  {item === "all" ? t("allColors") : item}
-                </option>
-              ))}
-            </select>
+            <div className="select-frame">
+              <select
+                value={color}
+                onChange={(event) => {
+                  setColor(event.target.value);
+                  setPage(1);
+                }}
+              >
+                {COLORS.map((item) => (
+                  <option key={item} value={item}>
+                    {item === "all" ? t("allColors") : item}
+                  </option>
+                ))}
+              </select>
+            </div>
           </label>
           <label>
             <span>{t("orientation")}</span>
-            <select
-              value={orientation}
-              onChange={(event) => {
-                setOrientation(event.target.value);
-                setPage(1);
-              }}
-            >
-              <option value="all">{t("allTypes")}</option>
-              <option value="landscape">{t("landscape")}</option>
-              <option value="portrait">{t("portrait")}</option>
-            </select>
+            <div className="select-frame">
+              <select
+                value={orientation}
+                onChange={(event) => {
+                  setOrientation(event.target.value);
+                  setPage(1);
+                }}
+              >
+                <option value="all">{t("allTypes")}</option>
+                <option value="landscape">{t("landscape")}</option>
+                <option value="portrait">{t("portrait")}</option>
+              </select>
+            </div>
           </label>
         </div>
         <div className="picker-scroll">
@@ -887,16 +891,18 @@ export default function App() {
                   ))}
                 </div>
                 <label className="field-label">{t("effect")}</label>
-                <select
-                  value={config.style}
-                  onChange={(event) =>
-                    update("style", event.target.value as CardsConfig["style"])
-                  }
-                >
-                  <option value="classic">{t("classic")}</option>
-                  <option value="hover">{t("hover")}</option>
-                  <option value="flip">{t("flip")}</option>
-                </select>
+                <div className="select-frame">
+                  <select
+                    value={config.style}
+                    onChange={(event) =>
+                      update("style", event.target.value as CardsConfig["style"])
+                    }
+                  >
+                    <option value="classic">{t("classic")}</option>
+                    <option value="hover">{t("hover")}</option>
+                    <option value="flip">{t("flip")}</option>
+                  </select>
+                </div>
                 <label className="field-label">{t("accent")}</label>
                 <div className="color-field">
                   <input
@@ -1121,19 +1127,21 @@ export default function App() {
                     </>
                   )}
                   <label className="field-label">{t("linkType")}</label>
-                  <select
-                    value={selectedCard.linkType}
-                    onChange={(event) =>
-                      updateCard(
-                        "linkType",
-                        event.target.value as CardItem["linkType"],
-                      )
-                    }
-                  >
-                    <option value="none">{t("noLink")}</option>
-                    <option value="url">{t("external")}</option>
-                    <option value="page">{t("wiki")}</option>
-                  </select>
+                  <div className="select-frame">
+                    <select
+                      value={selectedCard.linkType}
+                      onChange={(event) =>
+                        updateCard(
+                          "linkType",
+                          event.target.value as CardItem["linkType"],
+                        )
+                      }
+                    >
+                      <option value="none">{t("noLink")}</option>
+                      <option value="url">{t("external")}</option>
+                      <option value="page">{t("wiki")}</option>
+                    </select>
+                  </div>
                   {selectedCard.linkType !== "none" && (
                     <>
                       <label className="field-label">{t("link")}</label>

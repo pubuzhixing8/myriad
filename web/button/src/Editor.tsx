@@ -387,19 +387,21 @@ export function Editor({ initialConfig }: { initialConfig: ButtonConfig }) {
               {linkOpen && (
                 <div className="link-fields">
                   <Field label="链接类型">
-                    <select
-                      value={config.linkType}
-                      onChange={(event) =>
-                        change(
-                          "linkType",
-                          event.target.value as ButtonConfig["linkType"],
-                        )
-                      }
-                    >
-                      <option value="url">外部网址</option>
-                      <option value="page">Wiki 页面</option>
-                      <option value="email">电子邮件</option>
-                    </select>
+                    <div className="select-frame">
+                      <select
+                        value={config.linkType}
+                        onChange={(event) =>
+                          change(
+                            "linkType",
+                            event.target.value as ButtonConfig["linkType"],
+                          )
+                        }
+                      >
+                        <option value="url">外部网址</option>
+                        <option value="page">Wiki 页面</option>
+                        <option value="email">电子邮件</option>
+                      </select>
+                    </div>
                   </Field>
                   <Field
                     label={
