@@ -17,7 +17,6 @@ import {
 } from "lucide-react";
 import {
   DEFAULT_CONFIG,
-  PRESETS,
   normalizeConfig,
   validEmbedUrl,
   type EmbedHtmlConfig,
@@ -36,7 +35,6 @@ const LABELS = {
     urlMode: "网址 URL",
     code: "代码",
     codeLabel: "HTML / CSS / JS",
-    presets: "示例模板",
     url: "网址",
     urlLabel: "URL",
     urlNote:
@@ -54,6 +52,7 @@ const LABELS = {
     auto: "自动",
     always: "始终",
     hidden: "隐藏",
+    height: "显示高度（像素）",
     title: "iframe 标题",
     titlePlaceholder: "无障碍标题",
     preview: "实时预览",
@@ -64,7 +63,6 @@ const LABELS = {
     cancel: "取消",
     save: "保存",
     saving: "保存中…",
-    unsafePreset: "交互示例需要关闭净化 HTML 才能运行脚本。",
   },
   "en-US": {
     embedMethod: "Embed method",
@@ -73,7 +71,6 @@ const LABELS = {
     urlMode: "Website URL",
     code: "Code",
     codeLabel: "HTML / CSS / JS",
-    presets: "Example templates",
     url: "Website",
     urlLabel: "URL",
     urlNote:
@@ -91,6 +88,7 @@ const LABELS = {
     auto: "Auto",
     always: "Always",
     hidden: "Hidden",
+    height: "Display height (px)",
     title: "iframe title",
     titlePlaceholder: "Accessible title",
     preview: "Live preview",
@@ -101,7 +99,6 @@ const LABELS = {
     cancel: "Cancel",
     save: "Save",
     saving: "Saving…",
-    unsafePreset: "Turn off HTML sanitization to run the interactive example.",
   },
 };
 
@@ -173,7 +170,10 @@ function EmbeddedContent({
 
   return (
     <div className={`html-block ${config.showBorder ? "with-border" : ""}`}>
-      <div className={`html-shell ${config.mode}-mode`}>
+      <div
+        className={`html-shell ${config.mode}-mode`}
+        style={{ height: config.height }}
+      >
         <span
           className={`mode-badge ${!config.sanitize && config.mode === "code" ? "warning" : ""}`}
         >
@@ -236,7 +236,6 @@ export default function App() {
     normalizeConfig(DEFAULT_CONFIG),
   );
   const [loadUrlPreview, setLoadUrlPreview] = useState(false);
-  const [activePreset, setActivePreset] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const words = LABELS[locale];
@@ -366,36 +365,8 @@ export default function App() {
                 spellCheck={false}
                 rows={14}
                 value={config.code}
-                onChange={(event) => {
-                  update("code", event.target.value);
-                  setActivePreset(null);
-                }}
+                onChange={(event) => update("code", event.target.value)}
               />
-              <label className="field-label">{words.presets}</label>
-              <div className="preset-chips">
-                {PRESETS.map((preset, index) => (
-                  <button
-                    key={preset.nameEn}
-                    className={activePreset === index ? "active" : ""}
-                    onClick={() => {
-                      setConfig((current) => ({
-                        ...current,
-                        mode: "code",
-                        code: preset.code,
-                      }));
-                      setActivePreset(index);
-                    }}
-                  >
-                    {locale === "zh-CN" ? preset.nameZh : preset.nameEn}
-                  </button>
-                ))}
-              </div>
-              {activePreset === 1 && config.sanitize && (
-                <p className="hint">
-                  <AlertCircle size={14} />
-                  {words.unsafePreset}
-                </p>
-              )}
             </section>
           ) : (
             <section className="settings-section">
@@ -462,6 +433,22 @@ export default function App() {
                 <option value="no">{words.hidden}</option>
               </select>
             </div>
+            <label className="field-label" htmlFor="embed-height">
+              {words.height}
+            </label>
+            <input
+              id="embed-height"
+              type="number"
+              min={200}
+              max={1000}
+              value={config.height}
+              onChange={(event) =>
+                update(
+                  "height",
+                  Math.max(200, Math.min(1000, Number(event.target.value) || 200)),
+                )
+              }
+            />
             <label className="field-label" htmlFor="doc-title">
               {words.title}
             </label>
