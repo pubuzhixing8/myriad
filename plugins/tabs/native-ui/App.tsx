@@ -45,7 +45,7 @@ export function App() {
         <NxBlockContent
           key={tab.id}
           contentId={tab.id}
-          hidden={index !== activeIndex}
+          className={index === activeIndex ? "" : "hidden"}
         />
       ))}
     </>
