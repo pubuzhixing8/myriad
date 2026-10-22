@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { events, hasNexusBridge, i18n, view, type Subscription } from "@pc-nexus/bridge";
+import { events, hasNexusBridge, i18n, router, view, type Subscription } from "@pc-nexus/bridge";
 import { ExternalLink, Link2 } from "lucide-react";
 import {
   DEFAULT_CONFIG,
@@ -24,7 +24,20 @@ function EmbedFrame({ config, preview, load }: { config: EmbedConfig; preview: b
         <div className="embed-topbar">
           <strong>{source.name}</strong>
           <span>iframe</span>
-          {src && <a href={config.url} target="_blank" rel="noopener noreferrer">打开原链接 <ExternalLink size={13} /></a>}
+          {src && (
+            <a
+              href={config.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(event) => {
+                if (!hasNexusBridge()) return;
+                event.preventDefault();
+                void router.open(config.url);
+              }}
+            >
+              打开原链接 <ExternalLink size={13} />
+            </a>
+          )}
         </div>
         {src && (!preview || load) ? (
           <iframe
