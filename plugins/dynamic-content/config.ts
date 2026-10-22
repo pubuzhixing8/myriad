@@ -157,6 +157,7 @@ export interface DynamicContentItem {
   updatedAt: number;
   createdAt: number;
   spaceName: string;
+  createdByName: string;
 }
 
 export interface DynamicContentConfig {
@@ -181,6 +182,7 @@ export interface DynamicContentConfig {
   limit: number;
   showExcerpt: boolean;
   showMeta: boolean;
+  showCreator: boolean;
 }
 
 export const DEFAULT_DYNAMIC_CONTENT_CONFIG: DynamicContentConfig = {
@@ -211,6 +213,7 @@ export const DEFAULT_DYNAMIC_CONTENT_CONFIG: DynamicContentConfig = {
   limit: 12,
   showExcerpt: true,
   showMeta: true,
+  showCreator: true,
 };
 
 const MOCK_BASE_TIME = Date.now();
@@ -286,6 +289,7 @@ export const MOCK_PAGES: DynamicContentItem[] = PAGE_SEEDS.map(
     updatedAt: MOCK_BASE_TIME - index * 7 * 3_600_000,
     createdAt: MOCK_BASE_TIME - (index + 20) * 86_400_000,
     spaceName,
+    createdByName: ["李明", "王芳", "张伟", "陈静"][index % 4] ?? "李明",
   }),
 );
 
@@ -302,6 +306,17 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function textFrom(value: unknown): string {
   return String(value ?? "").replace(/<[^>]*>/g, "").trim();
+}
+
+function creatorName(value: Record<string, unknown>): string {
+  const creator = isRecord(value["created_by"])
+    ? value["created_by"]
+    : isRecord(value["createdBy"])
+      ? value["createdBy"]
+      : {};
+  return String(
+    creator["display_name"] ?? creator["displayName"] ?? creator["name"] ?? "",
+  );
 }
 
 export function normalizeSpace(value: unknown): WikiSpace | null {
@@ -350,6 +365,7 @@ export function normalizeSpaceItem(value: unknown): DynamicContentItem | null {
     updatedAt: space.updatedAt || 0,
     createdAt: space.createdAt || 0,
     spaceName: "",
+    createdByName: creatorName(raw),
   };
 }
 
@@ -372,6 +388,7 @@ export function normalizePageItem(value: unknown): DynamicContentItem | null {
     updatedAt: Number(value["updatedAt"] ?? value["updated_at"] ?? 0),
     createdAt: Number(value["createdAt"] ?? value["created_at"] ?? 0),
     spaceName: String(value["spaceName"] ?? space["name"] ?? ""),
+    createdByName: creatorName(value),
   };
 }
 
@@ -438,6 +455,10 @@ export function normalizeDynamicContentConfig(value: unknown): DynamicContentCon
       typeof value["showMeta"] === "boolean"
         ? value["showMeta"]
         : DEFAULT_DYNAMIC_CONTENT_CONFIG.showMeta,
+    showCreator:
+      typeof value["showCreator"] === "boolean"
+        ? value["showCreator"]
+        : DEFAULT_DYNAMIC_CONTENT_CONFIG.showCreator,
   };
 }
 

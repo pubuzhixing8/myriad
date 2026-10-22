@@ -11,8 +11,6 @@ import {
   AlignCenter,
   AlignLeft,
   AlignRight,
-  ArrowUpRight,
-  ChevronLeft,
   ChevronRight,
   FileText,
   Layers,
@@ -46,7 +44,7 @@ import "./style.css";
 
 const CONFIG_CHANGED_EVENT = "NEXUS_EXTENSION_DATA_CONFIG_CHANGED";
 const PICK_PAGE_SIZE = 10;
-const SPACE_OPTION_PAGE_SIZE = 20;
+const SPACE_OPTION_PAGE_SIZE = 10;
 
 /** Team URL from the host context, used to build wiki links for spaces. */
 let platformUrl = "";
@@ -66,6 +64,7 @@ export default function App() {
   const initialized = useRef(false);
   const keywordTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const refreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const spaceOptionTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const syncAttempt = useRef(0);
   const [mode, setMode] = useState<"view" | "edit">("edit");
   const [step, setStep] = useState<"choose" | "configure">("configure");
@@ -93,9 +92,9 @@ export default function App() {
   const [pageKeyword, setPageKeyword] = useState("");
 
   const [spaceOptions, setSpaceOptions] = useState<WikiSpace[]>([]);
-  const [spaceOptionsIndex, setSpaceOptionsIndex] = useState(0);
-  const [spaceOptionsTotal, setSpaceOptionsTotal] = useState(0);
   const [spaceOptionsLoading, setSpaceOptionsLoading] = useState(false);
+  const [spaceQuery, setSpaceQuery] = useState("");
+  const [spaceComboboxOpen, setSpaceComboboxOpen] = useState(false);
 
   useEffect(() => {
     if (initialized.current) return;
@@ -116,7 +115,7 @@ export default function App() {
         setConfig(demoConfig);
         setStep("configure");
         await loadResults(0, demoConfig, false);
-        if (nextMode === "edit") await loadSpaceOptions(0);
+        if (nextMode === "edit") await loadSpaceOptions("");
         setLoading(false);
         return;
       }
@@ -137,7 +136,7 @@ export default function App() {
           if (nextConfig.sourceType) {
             void syncResultsWithRetry(nextConfig);
             if (nextConfig.sourceType === "page") {
-              void loadSpaceOptions(0);
+              void loadSpaceOptions("");
             }
           }
         } else {
@@ -175,6 +174,7 @@ export default function App() {
       subscription?.unsubscribe();
       if (keywordTimer.current) clearTimeout(keywordTimer.current);
       if (refreshTimer.current) clearTimeout(refreshTimer.current);
+      if (spaceOptionTimer.current) clearTimeout(spaceOptionTimer.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -188,6 +188,11 @@ export default function App() {
       page.name.toLocaleLowerCase().includes(keyword),
     );
   }, [pageKeyword, pageList]);
+  const selectedSpaceName =
+    config.pageFilters.spaceName ||
+    spaceOptions.find((space) => space.id === config.pageFilters.spaceId)
+      ?.name ||
+    "";
 
   function syncReferencePage(targetConfig: DynamicContentConfig) {
     const filters = targetConfig.pageFilters;
@@ -348,32 +353,47 @@ export default function App() {
     }
   }
 
-  async function loadSpaceOptions(pageIndex: number) {
-    const target = Math.max(0, pageIndex);
+  async function loadSpaceOptions(query = "") {
     setSpaceOptionsLoading(true);
     try {
       if (!hasNexusBridge()) {
-        setSpaceOptions(paginate(MOCK_SPACES, target, SPACE_OPTION_PAGE_SIZE));
-        setSpaceOptionsIndex(target);
-        setSpaceOptionsTotal(MOCK_SPACES.length);
+        const keyword = query.trim().toLocaleLowerCase();
+        const matched = keyword
+          ? MOCK_SPACES.filter((space) =>
+              `${space.name ?? ""} ${space.identifier ?? ""}`
+                .toLocaleLowerCase()
+                .includes(keyword),
+            )
+          : MOCK_SPACES;
+        setSpaceOptions(matched.slice(0, SPACE_OPTION_PAGE_SIZE));
         return;
       }
       const result = await restJson<WikiPagesResponse>(
-        wikiSpacesPath(target, SPACE_OPTION_PAGE_SIZE),
+        wikiSpacesPath(0, SPACE_OPTION_PAGE_SIZE, {
+          keywords: query,
+          scopeType: "all",
+          includeArchived: false,
+        }),
       );
       setSpaceOptions(
         (Array.isArray(result.values) ? result.values : [])
           .map(normalizeSpace)
           .filter((space): space is WikiSpace => space !== null),
       );
-      setSpaceOptionsIndex(Number(result.page_index ?? target));
-      setSpaceOptionsTotal(Number(result.total ?? 0));
     } catch {
       setSpaceOptions([]);
-      setSpaceOptionsTotal(0);
     } finally {
       setSpaceOptionsLoading(false);
     }
+  }
+
+  function handleSpaceQuery(value: string) {
+    setSpaceQuery(value);
+    if (spaceOptionTimer.current) clearTimeout(spaceOptionTimer.current);
+    spaceOptionTimer.current = setTimeout(
+      () => void loadSpaceOptions(value),
+      300,
+    );
   }
 
   function startWithType(sourceType: "space" | "page") {
@@ -386,7 +406,7 @@ export default function App() {
     setPageKeyword("");
     setMessage("");
     void loadResults(0, next);
-    if (sourceType === "page") void loadSpaceOptions(spaceOptionsIndex);
+    if (sourceType === "page") void loadSpaceOptions(spaceQuery);
   }
 
   function handleSpaceKeyword(value: string) {
@@ -414,12 +434,19 @@ export default function App() {
 
   function handlePageSpace(spaceId: string) {
     const selected = spaceOptions.find((space) => space.id === spaceId);
+    const spaceName =
+      spaceId === ""
+        ? ""
+        : selected?.name ??
+          (config.pageFilters.spaceId === spaceId
+            ? config.pageFilters.spaceName
+            : "");
     const next = {
       ...config,
       pageFilters: {
         ...config.pageFilters,
         spaceId,
-        spaceName: selected?.name ?? "",
+        spaceName,
         relationPageId: "",
         relationPageName: "",
       },
@@ -427,6 +454,8 @@ export default function App() {
     setConfig(next);
     setReferencePage(null);
     setPickingReference(false);
+    setSpaceComboboxOpen(false);
+    setSpaceQuery(spaceName);
     void loadResults(0, next, false);
   }
 
@@ -769,6 +798,16 @@ export default function App() {
                   />
                   显示空间与更新时间
                 </label>
+                <label className="check-field">
+                  <input
+                    type="checkbox"
+                    checked={config.showCreator}
+                    onChange={(event) =>
+                      update("showCreator", event.target.checked)
+                    }
+                  />
+                  显示创建人
+                </label>
               </section>
             </>
           ) : (
@@ -810,58 +849,71 @@ export default function App() {
                 <section className="settings-section">
                   <h2>过滤条件</h2>
                   <label className="field-label">空间</label>
-                  <select
-                    value={config.pageFilters.spaceId}
-                    disabled={spaceOptionsLoading}
-                    onChange={(event) => handlePageSpace(event.target.value)}
-                  >
-                    <option value="">全部空间</option>
-                    {config.pageFilters.spaceId &&
-                      !spaceOptions.some(
-                        (space) => space.id === config.pageFilters.spaceId,
-                      ) && (
-                        <option value={config.pageFilters.spaceId}>
-                          {config.pageFilters.spaceName ||
-                            config.pageFilters.spaceId}
-                        </option>
-                      )}
-                    {spaceOptions.map((space) => (
-                      <option value={space.id} key={space.id}>
-                        {spaceLabel(space)}
-                      </option>
-                    ))}
-                  </select>
-                  <div className="space-pagination" aria-label="空间选项分页">
-                    <button
-                      className="icon-button"
-                      type="button"
-                      aria-label="上一页空间"
-                      disabled={spaceOptionsLoading || spaceOptionsIndex <= 0}
-                      onClick={() => void loadSpaceOptions(spaceOptionsIndex - 1)}
-                    >
-                      <ChevronLeft size={16} />
-                    </button>
-                    <span>
-                      {spaceOptionsIndex + 1} /{" "}
-                      {Math.max(
-                        1,
-                        Math.ceil(spaceOptionsTotal / SPACE_OPTION_PAGE_SIZE),
-                      )}{" "}
-                      · {spaceOptionsTotal} 个空间
-                    </span>
-                    <button
-                      className="icon-button"
-                      type="button"
-                      aria-label="下一页空间"
-                      disabled={
-                        spaceOptionsLoading ||
-                        spaceOptionsIndex + 1 >=
-                          Math.ceil(spaceOptionsTotal / SPACE_OPTION_PAGE_SIZE)
-                      }
-                      onClick={() => void loadSpaceOptions(spaceOptionsIndex + 1)}
-                    >
-                      <ChevronRight size={16} />
-                    </button>
+                  <div className="combobox">
+                    <input
+                      type="text"
+                      value={spaceComboboxOpen ? spaceQuery : selectedSpaceName}
+                      onFocus={() => {
+                        setSpaceQuery(selectedSpaceName);
+                        setSpaceComboboxOpen(true);
+                      }}
+                      onChange={(event) => handleSpaceQuery(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" && !spaceOptionsLoading) {
+                          const first = spaceOptions[0];
+                          if (first) handlePageSpace(first.id);
+                        }
+                        if (event.key === "Escape") {
+                          setSpaceComboboxOpen(false);
+                        }
+                      }}
+                      onBlur={() => {
+                        window.setTimeout(
+                          () => setSpaceComboboxOpen(false),
+                          150,
+                        );
+                      }}
+                      placeholder="搜索空间名称"
+                    />
+                    {spaceComboboxOpen && (
+                      <div className="combobox-list" role="listbox">
+                        <button
+                          type="button"
+                          className={
+                            config.pageFilters.spaceId ? "" : "active"
+                          }
+                          onMouseDown={(event) => {
+                            event.preventDefault();
+                            handlePageSpace("");
+                          }}
+                        >
+                          全部空间
+                        </button>
+                        {spaceOptionsLoading ? (
+                          <div className="combobox-state">正在加载空间…</div>
+                        ) : spaceOptions.length ? (
+                          spaceOptions.map((space) => (
+                            <button
+                              key={space.id}
+                              type="button"
+                              className={
+                                config.pageFilters.spaceId === space.id
+                                  ? "active"
+                                  : ""
+                              }
+                              onMouseDown={(event) => {
+                                event.preventDefault();
+                                handlePageSpace(space.id);
+                              }}
+                            >
+                              {spaceLabel(space)}
+                            </button>
+                          ))
+                        ) : (
+                          <div className="combobox-state">没有匹配的空间</div>
+                        )}
+                      </div>
+                    )}
                   </div>
                   <label className="field-label">定位页面</label>
                   <select
@@ -1148,12 +1200,28 @@ function ContentCard({
     textAlign: isList ? "left" : config.align,
     "--accent": config.accent,
   } as CSSProperties;
-  const meta = [
-    item.resourceType === "space" ? item.identifier : item.spaceName,
-    formatDate(item.updatedAt),
-  ]
-    .filter(Boolean)
-    .join(" · ");
+  const metaLines: string[] = [];
+  if (config.showMeta) {
+    if (item.resourceType === "page" && item.spaceName) {
+      metaLines.push(item.spaceName);
+    }
+    if (item.resourceType === "space" && item.identifier) {
+      metaLines.push(item.identifier);
+    }
+    const updated = formatDate(item.updatedAt);
+    if (updated) metaLines.push(`更新于 ${updated}`);
+  }
+  if (config.showCreator && item.createdByName) {
+    metaLines.push(`创建人 ${item.createdByName}`);
+  }
+  const metaNode =
+    metaLines.length > 0 ? (
+      <small className="card-meta">
+        {metaLines.map((line, index) => (
+          <span key={`${index}-${line}`}>{line}</span>
+        ))}
+      </small>
+    ) : null;
   const showIcon = isList || config.cardType === "icon";
 
   const front = (
@@ -1193,12 +1261,9 @@ function ContentCard({
           </span>
         )}
         <span className="card-text">
-          <strong>
-            {item.name}
-            {href && <ArrowUpRight size={12} className="card-external" />}
-          </strong>
+          <strong>{item.name}</strong>
           {config.showExcerpt && item.description && <p>{item.description}</p>}
-          {config.showMeta && meta && <small className="card-meta">{meta}</small>}
+          {metaNode}
         </span>
       </div>
     </>
@@ -1217,7 +1282,7 @@ function ContentCard({
           <div className="card-face card-back">
             <strong>{item.name}</strong>
             {item.description && <p>{item.description}</p>}
-            {config.showMeta && meta && <small className="card-meta">{meta}</small>}
+            {metaNode}
           </div>
         </div>
       ) : (
