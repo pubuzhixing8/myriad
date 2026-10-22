@@ -13,7 +13,7 @@ translations:
 extensions:
   - key: myriad-tabs
     target: pcm:wiki:document:block
-    title: Myriad - Tabs
+    title: Tabs
     icon: resource:button/myriad.svg
     resource: tabs
     layout: bodied
@@ -27,7 +27,7 @@ extensions:
       openOnInsert: true
   - key: myriad-button
     target: pcm:wiki:document:block
-    title: Myriad - Button
+    title: Button
     icon: resource:button/myriad.svg
     resource: button
     layout: inline
@@ -42,7 +42,7 @@ extensions:
       openOnInsert: true
   - key: myriad-background
     target: pcm:wiki:document:block
-    title: Myriad - Background
+    title: Background
     icon: resource:button/myriad.svg
     resource: background
     layout: bodied
@@ -58,7 +58,7 @@ extensions:
       openOnInsert: true
   - key: myriad-card-grid
     target: pcm:wiki:document:block
-    title: Myriad - Cards
+    title: Cards
     icon: resource:button/myriad.svg
     resource: card-grid
     layout: block
@@ -75,7 +75,7 @@ extensions:
       openOnInsert: true
   - key: myriad-html-iframe
     target: pcm:wiki:document:block
-    title: Myriad - Embed HTML
+    title: Embed HTML
     icon: resource:button/myriad.svg
     resource: embed-html
     layout: block
@@ -90,7 +90,7 @@ extensions:
       openOnInsert: true
   - key: myriad-embed
     target: pcm:wiki:document:block
-    title: Myriad - Embed
+    title: Embed
     icon: resource:button/myriad.svg
     resource: embed
     layout: block
@@ -105,7 +105,7 @@ extensions:
       openOnInsert: true
   - key: myriad-dynamic-content
     target: pcm:wiki:document:block
-    title: Myriad - Dynamic Content
+    title: Dynamic Content
     icon: resource:button/myriad.svg
     resource: dynamic-content
     layout: block
