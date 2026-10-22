@@ -1,4 +1,4 @@
-export type EmbedSource = "bilibili" | "figma" | "canva" | "lanhu" | "codepen";
+export type EmbedSource = "bilibili" | "figma" | "canva" | "lanhu" | "codepen" | "jsfiddle" | "stackblitz";
 
 export interface EmbedConfig {
   source: EmbedSource;
@@ -50,6 +50,20 @@ export const SOURCES: {
     name: "CodePen",
     placeholder: "https://codepen.io/user/pen/abc123",
     hint: "粘贴公开 Pen 链接，自动转换为可交互的嵌入视图。",
+  },
+  {
+    id: "jsfiddle",
+    group: "研发",
+    name: "JSFiddle",
+    placeholder: "https://jsfiddle.net/user/abc123/",
+    hint: "粘贴公开 Fiddle 链接，自动转换为包含代码和运行结果的嵌入视图。",
+  },
+  {
+    id: "stackblitz",
+    group: "研发",
+    name: "StackBlitz",
+    placeholder: "https://stackblitz.com/edit/project-name",
+    hint: "粘贴公开项目链接，自动转换为可交互的嵌入视图。",
   },
 ];
 
@@ -125,6 +139,21 @@ export function embedUrl(source: EmbedSource, value: string): string | null {
   if (source === "lanhu") {
     if (!hostIs(host, "lanhuapp.com")) return null;
     return /^\/(?:web|link)(?:\/|$)/.test(url.pathname) ? url.href : null;
+  }
+
+  if (source === "jsfiddle") {
+    if (!hostIs(host, "jsfiddle.net")) return null;
+    const match = url.pathname.match(/^\/(?:([^/]+)\/)?([\w-]+)(?:\/embedded(?:\/[^/]*)?)?\/?$/);
+    if (!match) return null;
+    const path = match[1] ? `${match[1]}/${match[2]}` : match[2];
+    return `https://jsfiddle.net/${path}/embedded/`;
+  }
+
+  if (source === "stackblitz") {
+    if (!hostIs(host, "stackblitz.com")) return null;
+    if (!/^\/edit\/[\w-]+\/?$/.test(url.pathname)) return null;
+    url.searchParams.set("embed", "1");
+    return url.href;
   }
 
   if (!hostIs(host, "codepen.io")) return null;

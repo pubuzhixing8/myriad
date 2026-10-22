@@ -7,7 +7,7 @@ PingCode Wiki `document:block` extensions built with Nexus:
 - **Myriad - Pages:** Custom UI block that loads Wiki pages dynamically and presents selected pages as configurable page cards.
 - **Myriad - Cards:** Independent block for up to six manually configured cards, with text, icons or Pixabay images.
 - **Myriad - Embed HTML:** Sandboxed block for custom HTML/CSS/JS or an external website URL.
-- **Myriad - Embed:** Source-aware Wiki block for Bilibili videos, Figma files, Canva and Lanhu designs, and CodePen pens.
+- **Myriad - Embed:** Source-aware Wiki block for Bilibili videos, Figma files, Canva and Lanhu designs, CodePen pens, JSFiddle fiddles, and StackBlitz projects.
 - **Myriad - Dynamic Content:** Custom UI block that lists Wiki spaces or pages matching configurable filters, with pagination.
 - **Myriad - Tabs:** Native UI tabs with a separate editable Wiki body for each tab. The Custom UI editor manages tab names, adding and deleting tabs, and previews the selection.
 
@@ -34,7 +34,7 @@ The max-size editor follows the prototype's code and URL modes, three example te
 
 ## Myriad - Embed
 
-The separate Embed block groups sources into Video (Bilibili), Design (Figma, Canva, and Lanhu), and Development (CodePen). It converts supported Bilibili, Figma, Canva, and CodePen links to iframe URLs; Lanhu design and share links load directly because no dedicated embed endpoint is documented. The editor previews external content only after a click, and saved blocks load immediately. Canva requires a published embed/view URL. Source permissions, sign-in state, and browser iframe policies still apply. Run `npm run dev --prefix web/embed` and open `http://127.0.0.1:3106/` for the editor or add `?mode=view` for the block.
+The separate Embed block groups sources into Video (Bilibili), Design (Figma, Canva, and Lanhu), and Development (CodePen, JSFiddle, and StackBlitz). It converts supported Bilibili, Figma, Canva, CodePen, JSFiddle, and StackBlitz links to iframe URLs; Lanhu design and share links load directly because no dedicated embed endpoint is documented. The editor previews external content only after a click, and saved blocks load immediately. Canva requires a published embed/view URL. Source permissions, sign-in state, and browser iframe policies still apply. Run `npm run dev --prefix web/embed` and open `http://127.0.0.1:3106/` for the editor or add `?mode=view` for the block.
 
 ## Myriad - Dynamic Content
 
