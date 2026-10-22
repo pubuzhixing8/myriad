@@ -116,6 +116,6 @@ export function embedUrl(source: EmbedSource, value: string): string | null {
   }
 
   if (!hostIs(host, "codepen.io")) return null;
-  const match = url.pathname.match(/^\/([^/]+)\/(?:pen|embed)\/([\w-]+)/);
+  const match = url.pathname.match(/^\/(?:editor\/)?([^/]+)\/(?:pen|embed)\/([\w-]+)/);
   return match ? `https://codepen.io/${match[1]}/embed/${match[2]}` : null;
 }
