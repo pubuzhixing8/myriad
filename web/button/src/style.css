@@ -644,14 +644,3 @@ a.styled-button:focus-visible {
     padding: 16px;
   }
 }
-
-.field select {
-  appearance: none;
-  padding-right: 36px;
-  background-image:
-    linear-gradient(45deg, transparent 42%, #69788b 42%, #69788b 58%, transparent 58%),
-    linear-gradient(135deg, transparent 42%, #69788b 42%, #69788b 58%, transparent 58%);
-  background-position: right 19px center, right 12px center;
-  background-repeat: no-repeat;
-  background-size: 8px 8px;
-}
