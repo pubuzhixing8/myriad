@@ -1,4 +1,4 @@
-export type EmbedSource = "bilibili" | "figma" | "canva" | "codepen";
+export type EmbedSource = "bilibili" | "figma" | "canva" | "lanhu" | "codepen";
 
 export interface EmbedConfig {
   source: EmbedSource;
@@ -36,6 +36,13 @@ export const SOURCES: {
     name: "Canva",
     placeholder: "https://www.canva.com/design/.../view",
     hint: "请在 Canva 中发布嵌入内容，粘贴其嵌入链接。普通编辑链接可能无法显示。",
+  },
+  {
+    id: "lanhu",
+    group: "设计",
+    name: "蓝湖",
+    placeholder: "https://lanhuapp.com/web/#/item/...",
+    hint: "粘贴蓝湖设计图、原型或分享链接。内容原样加载，显示效果取决于登录和分享权限。",
   },
   {
     id: "codepen",
@@ -113,6 +120,11 @@ export function embedUrl(source: EmbedSource, value: string): string | null {
     if (!/^\/design\/[^/]+\/(?:[^/]+\/)?view\/?$/.test(url.pathname)) return null;
     url.searchParams.set("embed", "");
     return url.href;
+  }
+
+  if (source === "lanhu") {
+    if (!hostIs(host, "lanhuapp.com")) return null;
+    return /^\/(?:web|link)(?:\/|$)/.test(url.pathname) ? url.href : null;
   }
 
   if (!hostIs(host, "codepen.io")) return null;
