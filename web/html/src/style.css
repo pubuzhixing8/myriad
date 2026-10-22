@@ -178,7 +178,7 @@ button {
   display: flex;
   align-items: center;
   gap: 7px;
-  padding: 18px 24px;
+  padding: 8px 24px;
   color: #96a1b1;
   font-size: 12px;
 }
@@ -190,7 +190,6 @@ button {
   align-items: safe center;
   justify-content: safe center;
   overflow: auto;
-  padding: 32px 5%;
 }
 
 .preview-stage .html-block {
