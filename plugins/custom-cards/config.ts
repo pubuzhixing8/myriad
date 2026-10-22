@@ -11,7 +11,9 @@ export type CardIcon =
   | "lock"
   | "chart"
   | "check";
-export type LinkType = "none" | "url" | "page" | "attachment";
+export type LinkType = "none" | "url" | "page";
+
+export const MAX_CARDS = 12;
 
 export interface CardImage {
   id: string;
@@ -173,7 +175,7 @@ export function normalizeConfig(value: unknown): CardsConfig {
       cards: sampleCards.map((card) => ({ ...card })),
     };
   const cards = Array.isArray(source.cards)
-    ? source.cards.slice(0, 6).map((item, index) => {
+    ? source.cards.slice(0, MAX_CARDS).map((item, index) => {
         const data = record(item) ?? {};
         const imageData = record(data.image);
         const image =
@@ -209,8 +211,8 @@ export function normalizeConfig(value: unknown): CardsConfig {
           ),
           image,
           linkType: choice(
-            data.linkType,
-            ["none", "url", "page", "attachment"],
+            data.linkType === "attachment" ? "url" : data.linkType,
+            ["none", "url", "page"],
             "none",
           ),
           link: String(data.link ?? ""),

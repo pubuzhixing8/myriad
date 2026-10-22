@@ -4,6 +4,7 @@ import {
   hasNexusBridge,
   i18n,
   invoke,
+  router,
   view,
   type Subscription,
 } from "@pc-nexus/bridge";
@@ -12,6 +13,7 @@ import {
   AlignLeft,
   AlignRight,
   ArrowLeft,
+  ArrowRight,
   ArrowUpRight,
   BarChart3,
   Check,
@@ -26,6 +28,7 @@ import {
   Zap,
 } from "lucide-react";
 import {
+  MAX_CARDS,
   createCard,
   normalizeConfig,
   type CardIcon,
@@ -53,7 +56,10 @@ type SearchResult = {
   page: number;
   hasMore: boolean;
 };
-type EntryData = { config?: unknown; entry?: { mode?: Mode } };
+type EntryData = {
+  config?: unknown;
+  entry?: { mode?: Mode; isEditing?: boolean };
+};
 const DEFAULT_PHOTOS = [
   {
     id: "7276585",
@@ -162,7 +168,6 @@ const LABELS = {
     noLink: "无",
     external: "外部链接",
     wiki: "Wiki 页面",
-    attachment: "附件",
     link: "链接地址",
     linkText: "链接文案",
     preview: "预览",
@@ -225,7 +230,6 @@ const LABELS = {
     noLink: "None",
     external: "External URL",
     wiki: "Wiki page",
-    attachment: "Attachment",
     link: "Link URL",
     linkText: "Link text",
     preview: "Preview",
@@ -275,13 +279,27 @@ function Card({
   card,
   config,
   interactive,
+  onSelect,
+  selected = false,
 }: {
   card: CardItem;
   config: CardsConfig;
   interactive: boolean;
+  onSelect?: () => void;
+  selected?: boolean;
 }) {
   const Icon = ICONS[card.icon];
   const href = card.linkType !== "none" ? validLink(card.link) : null;
+  const linkLabel = card.linkType !== "none" && card.linkText ? (
+    <span className="card-link">
+      <span className="card-link-text">{card.linkText}</span>
+      {card.linkType === "url" ? (
+        <ArrowUpRight size={13} aria-hidden="true" />
+      ) : (
+        <ArrowRight size={13} aria-hidden="true" />
+      )}
+    </span>
+  ) : null;
   const style = {
     borderRadius: config.radius,
     border: config.border ? "1px solid #e6e9f0" : "1px solid transparent",
@@ -320,26 +338,22 @@ function Card({
         )}
         <strong>{card.title || " "}</strong>
         {card.text && <p>{card.text}</p>}
-        {card.linkType !== "none" && card.linkText && (
-          <span className="card-link">
-            {card.linkText}
-            {card.linkType === "url" && <ArrowUpRight size={13} />}
-          </span>
-        )}
+        {linkLabel}
       </div>
     </>
   );
   return (
-    <div className={`card-card effect-${config.style}`} style={style}>
+    <div
+      className={`card-card effect-${config.style}${selected ? " is-selected" : ""}`}
+      style={style}
+    >
       {config.style === "flip" ? (
         <div className="card-flip-inner">
           <div className="card-face card-front">{content}</div>
           <div className="card-face card-back">
             <strong>{card.title}</strong>
             <p>{card.text}</p>
-            {card.linkText && href && (
-              <span className="card-link">{card.linkText}</span>
-            )}
+            {href && linkLabel}
           </div>
         </div>
       ) : (
@@ -352,6 +366,19 @@ function Card({
           target="_blank"
           rel="noopener noreferrer"
           aria-label={card.title || card.linkText}
+          onClick={(event) => {
+            if (!hasNexusBridge()) return;
+            event.preventDefault();
+            void router.open(href);
+          }}
+        />
+      )}
+      {onSelect && (
+        <button
+          type="button"
+          className="card-hit-area card-select-area"
+          onClick={onSelect}
+          aria-label={card.title || "卡片"}
         />
       )}
     </div>
@@ -361,9 +388,13 @@ function Card({
 function CardGrid({
   config,
   interactive,
+  onSelectCard,
+  activeCard,
 }: {
   config: CardsConfig;
   interactive: boolean;
+  onSelectCard?: (index: number) => void;
+  activeCard?: number;
 }) {
   return (
     <div
@@ -373,12 +404,14 @@ function CardGrid({
         gap: config.gap,
       }}
     >
-      {config.cards.map((card) => (
+      {config.cards.map((card, index) => (
         <Card
           key={card.id}
           card={card}
           config={config}
           interactive={interactive}
+          onSelect={onSelectCard ? () => onSelectCard(index) : undefined}
+          selected={onSelectCard !== undefined && index === activeCard}
         />
       ))}
     </div>
@@ -426,6 +459,7 @@ function Range({
 
 export default function App() {
   const [mode, setMode] = useState<Mode>("edit");
+  const [isEditingPage, setIsEditingPage] = useState(false);
   const [locale, setLocale] = useState<Locale>(fallbackLocale);
   const [config, setConfig] = useState<CardsConfig>(() =>
     normalizeConfig(null),
@@ -446,6 +480,9 @@ export default function App() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const requestId = useRef(0);
+  const settingsScrollRef = useRef<HTMLDivElement>(null);
+  const cardFieldsRef = useRef<HTMLElement>(null);
+  const titleInputRef = useRef<HTMLInputElement>(null);
   const words = LABELS[locale];
   const t = (key: keyof (typeof LABELS)["zh-CN"]) => words[key];
   const selectedCard = config.cards[activeCard] ?? config.cards[0];
@@ -464,6 +501,23 @@ export default function App() {
       }))
     : photos;
 
+  function selectPreviewCard(index: number) {
+    setTab("content");
+    setActiveCard(index);
+    requestAnimationFrame(() => {
+      const scroll = settingsScrollRef.current;
+      const fields = cardFieldsRef.current;
+      if (!scroll || !fields) return;
+      titleInputRef.current?.focus({ preventScroll: true });
+      const top =
+        fields.getBoundingClientRect().top -
+        scroll.getBoundingClientRect().top +
+        scroll.scrollTop -
+        16;
+      scroll.scrollTo({ top, behavior: "smooth" });
+    });
+  }
+
   useEffect(() => {
     if (!hasNexusBridge()) {
       setMode(
@@ -481,6 +535,9 @@ export default function App() {
         if (!active) return;
         const nextMode = context.extension?.data?.entry?.mode ?? "view";
         setMode(nextMode);
+        setIsEditingPage(
+          context.extension?.data?.entry?.isEditing === true,
+        );
         setConfig(normalizeConfig(context.extension?.data?.config));
         setLocale(
           context.user?.locale ?? context.team?.locale ?? fallbackLocale(),
@@ -596,7 +653,7 @@ export default function App() {
   if (mode === "view")
     return (
       <main className="cards-view">
-        <CardGrid config={config} interactive />
+        <CardGrid config={config} interactive={!isEditingPage} />
       </main>
     );
 
@@ -779,7 +836,7 @@ export default function App() {
             {t("content")}
           </button>
         </div>
-        <div className="settings-scroll">
+        <div className="settings-scroll" ref={settingsScrollRef}>
           {tab === "general" ? (
             <>
               <section className="settings-section">
@@ -931,18 +988,22 @@ export default function App() {
               <section className="settings-section">
                 <div className="section-head">
                   <h2>
-                    {t("cards")} · {config.cards.length}/6
+                    {t("cards")} · {config.cards.length}/{MAX_CARDS}
                   </h2>
                   <button
-                    disabled={config.cards.length >= 6}
+                    disabled={config.cards.length >= MAX_CARDS}
                     onClick={() => {
-                      setConfig((current) => ({
-                        ...current,
-                        cards: [
-                          ...current.cards,
-                          createCard(current.cards.length + 1),
-                        ],
-                      }));
+                      setConfig((current) =>
+                        current.cards.length >= MAX_CARDS
+                          ? current
+                          : {
+                              ...current,
+                              cards: [
+                                ...current.cards,
+                                createCard(current.cards.length + 1),
+                              ],
+                            },
+                      );
                       setActiveCard(config.cards.length);
                     }}
                   >
@@ -963,7 +1024,10 @@ export default function App() {
                 </div>
               </section>
               {selectedCard && (
-                <section className="settings-section card-fields">
+                <section
+                  className="settings-section card-fields"
+                  ref={cardFieldsRef}
+                >
                   <div className="section-head">
                     <h2>
                       {t("cards")} {activeCard + 1}
@@ -987,6 +1051,7 @@ export default function App() {
                   </div>
                   <label className="field-label">{t("title")}</label>
                   <input
+                    ref={titleInputRef}
                     value={selectedCard.title}
                     onChange={(event) =>
                       updateCard("title", event.target.value)
@@ -1068,7 +1133,6 @@ export default function App() {
                     <option value="none">{t("noLink")}</option>
                     <option value="url">{t("external")}</option>
                     <option value="page">{t("wiki")}</option>
-                    <option value="attachment">{t("attachment")}</option>
                   </select>
                   {selectedCard.linkType !== "none" && (
                     <>
@@ -1099,7 +1163,12 @@ export default function App() {
       <main className="preview-panel">
         <div className="preview-heading">{t("preview")}</div>
         <div className="preview-canvas">
-          <CardGrid config={config} interactive={false} />
+          <CardGrid
+            config={config}
+            interactive={false}
+            onSelectCard={selectPreviewCard}
+            activeCard={activeCard}
+          />
         </div>
       </main>
       <footer className="editor-footer">

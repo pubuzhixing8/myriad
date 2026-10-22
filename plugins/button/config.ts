@@ -6,7 +6,7 @@ export type ButtonShape =
   | "tag"
   | "circle";
 export type ButtonSize = "small" | "medium" | "large";
-export type ButtonLinkType = "url" | "page" | "attachment" | "email";
+export type ButtonLinkType = "url" | "page" | "email";
 
 export const ICONFONT_ICONS = [
   ["play", "播放"],
@@ -182,6 +182,9 @@ export const TEMPLATES: {
 
 export function normalizeButton(value?: Partial<ButtonConfig>): ButtonConfig {
   const config = { ...DEFAULT_BUTTON, ...value };
+  if ((value as { linkType?: string } | undefined)?.linkType === "attachment") {
+    config.linkType = "url";
+  }
   if (!ICONFONT_ICONS.some(([id]) => id === config.iconId)) {
     config.iconId = "none";
   }

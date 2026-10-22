@@ -398,7 +398,6 @@ export function Editor({ initialConfig }: { initialConfig: ButtonConfig }) {
                     >
                       <option value="url">外部网址</option>
                       <option value="page">Wiki 页面</option>
-                      <option value="attachment">附件</option>
                       <option value="email">电子邮件</option>
                     </select>
                   </Field>
