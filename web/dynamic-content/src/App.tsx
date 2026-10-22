@@ -654,19 +654,21 @@ export default function App() {
                       ))}
                     </div>
                     <label className="field-label">悬浮效果</label>
-                    <select
-                      value={config.style}
-                      onChange={(event) =>
-                        update(
-                          "style",
-                          event.target.value as DynamicContentConfig["style"],
-                        )
-                      }
-                    >
-                      <option value="classic">无</option>
-                      <option value="hover">悬浮抬升</option>
-                      <option value="flip">翻转</option>
-                    </select>
+                    <div className="select-frame">
+                      <select
+                        value={config.style}
+                        onChange={(event) =>
+                          update(
+                            "style",
+                            event.target.value as DynamicContentConfig["style"],
+                          )
+                        }
+                      >
+                        <option value="classic">无</option>
+                        <option value="hover">悬浮抬升</option>
+                        <option value="flip">翻转</option>
+                      </select>
+                    </div>
                     <label className="field-label">主色</label>
                     <div className="color-field">
                       <input
@@ -687,22 +689,24 @@ export default function App() {
               <section className="settings-section">
                 <h2>图片</h2>
                 <label className="field-label">图片系列</label>
-                <select
-                  value={config.background}
-                  onChange={(event) =>
-                    update(
-                      "background",
-                      event.target.value as DynamicContentConfig["background"],
-                    )
-                  }
-                >
-                  <option value="none">无</option>
-                  {BACKGROUND_OPTIONS.map((option) => (
-                    <option value={option.key} key={option.key}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
+                <div className="select-frame">
+                  <select
+                    value={config.background}
+                    onChange={(event) =>
+                      update(
+                        "background",
+                        event.target.value as DynamicContentConfig["background"],
+                      )
+                    }
+                  >
+                    <option value="none">无</option>
+                    {BACKGROUND_OPTIONS.map((option) => (
+                      <option value={option.key} key={option.key}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
                 {config.display === "list" && config.background !== "none" && (
                   <small>列表模式下作为每条结果的图标。</small>
                 )}
@@ -823,17 +827,19 @@ export default function App() {
                     placeholder="按空间名称搜索"
                   />
                   <label className="field-label">可见范围</label>
-                  <select
-                    value={config.spaceFilters.scopeType}
-                    onChange={(event) =>
-                      handleSpaceScopeType(event.target.value as SpaceScopeType)
-                    }
-                  >
-                    <option value="all">全部范围</option>
-                    <option value="organization">企业可见</option>
-                    <option value="user_group">团队可见</option>
-                    <option value="user">用户可见</option>
-                  </select>
+                  <div className="select-frame">
+                    <select
+                      value={config.spaceFilters.scopeType}
+                      onChange={(event) =>
+                        handleSpaceScopeType(event.target.value as SpaceScopeType)
+                      }
+                    >
+                      <option value="all">全部范围</option>
+                      <option value="organization">企业可见</option>
+                      <option value="user_group">团队可见</option>
+                      <option value="user">用户可见</option>
+                    </select>
+                  </div>
                   <label className="check-field">
                     <input
                       type="checkbox"
@@ -916,16 +922,18 @@ export default function App() {
                     )}
                   </div>
                   <label className="field-label">定位页面</label>
-                  <select
-                    value={config.pageFilters.relation}
-                    onChange={(event) =>
-                      handlePageRelation(event.target.value as PageRelation)
-                    }
-                  >
-                    <option value="none">不限</option>
-                    <option value="parent">某页面的直接子页面</option>
-                    <option value="ancestor">某页面的所有子孙页面</option>
-                  </select>
+                  <div className="select-frame">
+                    <select
+                      value={config.pageFilters.relation}
+                      onChange={(event) =>
+                        handlePageRelation(event.target.value as PageRelation)
+                      }
+                    >
+                      <option value="none">不限</option>
+                      <option value="parent">某页面的直接子页面</option>
+                      <option value="ancestor">某页面的所有子孙页面</option>
+                    </select>
+                  </div>
                   {config.pageFilters.relation !== "none" && (
                     <div className="reference-box">
                       <div>
@@ -949,19 +957,21 @@ export default function App() {
               <section className="settings-section">
                 <h2>排序与分页</h2>
                 <label className="field-label">排序</label>
-                <select
-                  value={config.sort}
-                  onChange={(event) =>
-                    update(
-                      "sort",
-                      event.target.value as DynamicContentConfig["sort"],
-                    )
-                  }
-                >
-                  <option value="updated_desc">最近更新</option>
-                  <option value="created_desc">最新创建</option>
-                  <option value="title_asc">标题 A-Z</option>
-                </select>
+                <div className="select-frame">
+                  <select
+                    value={config.sort}
+                    onChange={(event) =>
+                      update(
+                        "sort",
+                        event.target.value as DynamicContentConfig["sort"],
+                      )
+                    }
+                  >
+                    <option value="updated_desc">最近更新</option>
+                    <option value="created_desc">最新创建</option>
+                    <option value="title_asc">标题 A-Z</option>
+                  </select>
+                </div>
                 <label className="field-label">每页条数</label>
                 <input
                   type="number"

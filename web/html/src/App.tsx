@@ -446,20 +446,22 @@ export default function App() {
             <label className="field-label" htmlFor="scrolling">
               {words.scrolling}
             </label>
-            <select
-              id="scrolling"
-              value={config.scrolling}
-              onChange={(event) =>
-                update(
-                  "scrolling",
-                  event.target.value as EmbedHtmlConfig["scrolling"],
-                )
-              }
-            >
-              <option value="auto">{words.auto}</option>
-              <option value="yes">{words.always}</option>
-              <option value="no">{words.hidden}</option>
-            </select>
+            <div className="select-frame">
+              <select
+                id="scrolling"
+                value={config.scrolling}
+                onChange={(event) =>
+                  update(
+                    "scrolling",
+                    event.target.value as EmbedHtmlConfig["scrolling"],
+                  )
+                }
+              >
+                <option value="auto">{words.auto}</option>
+                <option value="yes">{words.always}</option>
+                <option value="no">{words.hidden}</option>
+              </select>
+            </div>
             <label className="field-label" htmlFor="doc-title">
               {words.title}
             </label>

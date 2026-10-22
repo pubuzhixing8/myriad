@@ -380,22 +380,24 @@ export default function App() {
           <section className="setting-section image-section">
             <h2>{t("background")}</h2>
             <FieldLabel>{t("backgroundType")}</FieldLabel>
-            <select
-              className="field-select"
-              value={config.backgroundType}
-              onChange={(event) => {
-                const type = event.target
-                  .value as BackgroundConfig["backgroundType"];
-                if (type === "image" && !getImageUrl(config)) {
-                  setPickerOpen(true);
-                } else {
-                  update("backgroundType", type);
-                }
-              }}
-            >
-              <option value="color">{t("backgroundColor")}</option>
-              <option value="image">{t("image")}</option>
-            </select>
+            <div className="select-frame">
+              <select
+                className="field-select"
+                value={config.backgroundType}
+                onChange={(event) => {
+                  const type = event.target
+                    .value as BackgroundConfig["backgroundType"];
+                  if (type === "image" && !getImageUrl(config)) {
+                    setPickerOpen(true);
+                  } else {
+                    update("backgroundType", type);
+                  }
+                }}
+              >
+                <option value="color">{t("backgroundColor")}</option>
+                <option value="image">{t("image")}</option>
+              </select>
+            </div>
             {!imageMode && (
               <div
                 className="background-colors"
@@ -440,27 +442,29 @@ export default function App() {
                 {hasImage && (
                   <>
                     <FieldLabel>{t("fit")}</FieldLabel>
-                    <select
-                      className="field-select"
-                      value={config.imageSize}
-                      onChange={(event) =>
-                        update(
-                          "imageSize",
-                          event.target.value as BackgroundConfig["imageSize"],
-                        )
-                      }
-                    >
-                      <option value="cover">
-                        {locale === "zh-CN"
-                          ? `${t("cover")} · Cover`
-                          : t("cover")}
-                      </option>
-                      <option value="contain">
-                        {locale === "zh-CN"
-                          ? `${t("contain")} · Contain`
-                          : t("contain")}
-                      </option>
-                    </select>
+                    <div className="select-frame">
+                      <select
+                        className="field-select"
+                        value={config.imageSize}
+                        onChange={(event) =>
+                          update(
+                            "imageSize",
+                            event.target.value as BackgroundConfig["imageSize"],
+                          )
+                        }
+                      >
+                        <option value="cover">
+                          {locale === "zh-CN"
+                            ? `${t("cover")} · Cover`
+                            : t("cover")}
+                        </option>
+                        <option value="contain">
+                          {locale === "zh-CN"
+                            ? `${t("contain")} · Contain`
+                            : t("contain")}
+                        </option>
+                      </select>
+                    </div>
                     <RangeField
                       label={t("imageOpacity")}
                       value={Math.round((config.opacity ?? 1) * 100)}
@@ -578,37 +582,41 @@ export default function App() {
             </label>
             <label className="filter-select">
               <span>{t("color")}</span>
-              <select
-                value={color}
-                onChange={(event) => {
-                  setColor(event.target.value);
-                  setPage(1);
-                }}
-              >
-                {COLORS.map((item) => (
-                  <option key={item} value={item}>
-                    {item === "all"
-                      ? t("allColors")
-                      : locale === "zh-CN"
-                        ? COLOR_LABELS[item]
-                        : item}
-                  </option>
-                ))}
-              </select>
+              <div className="select-frame">
+                <select
+                  value={color}
+                  onChange={(event) => {
+                    setColor(event.target.value);
+                    setPage(1);
+                  }}
+                >
+                  {COLORS.map((item) => (
+                    <option key={item} value={item}>
+                      {item === "all"
+                        ? t("allColors")
+                        : locale === "zh-CN"
+                          ? COLOR_LABELS[item]
+                          : item}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </label>
             <label className="filter-select">
               <span>{t("type")}</span>
-              <select
-                value={orientation}
-                onChange={(event) => {
-                  setOrientation(event.target.value as Orientation);
-                  setPage(1);
-                }}
-              >
-                <option value="all">{t("allTypes")}</option>
-                <option value="landscape">{t("landscape")}</option>
-                <option value="portrait">{t("portrait")}</option>
-              </select>
+              <div className="select-frame">
+                <select
+                  value={orientation}
+                  onChange={(event) => {
+                    setOrientation(event.target.value as Orientation);
+                    setPage(1);
+                  }}
+                >
+                  <option value="all">{t("allTypes")}</option>
+                  <option value="landscape">{t("landscape")}</option>
+                  <option value="portrait">{t("portrait")}</option>
+                </select>
+              </div>
             </label>
           </div>
           <div className="picker-results" ref={resultsRef}>
