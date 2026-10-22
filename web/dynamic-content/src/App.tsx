@@ -3,6 +3,7 @@ import {
   api,
   events,
   hasNexusBridge,
+  router,
   view,
   type Subscription,
 } from "@pc-nexus/bridge";
@@ -31,6 +32,7 @@ import {
   normalizeSpace,
   normalizeSpaceItem,
   pickBackgroundImage,
+  resolveItemUrl,
   type DynamicContentConfig,
   type DynamicContentItem,
   type PageFilters,
@@ -45,6 +47,9 @@ import "./style.css";
 const CONFIG_CHANGED_EVENT = "NEXUS_EXTENSION_DATA_CONFIG_CHANGED";
 const PICK_PAGE_SIZE = 10;
 const SPACE_OPTION_PAGE_SIZE = 20;
+
+/** Team URL from the host context, used to build wiki links for spaces. */
+let platformUrl = "";
 
 interface WikiPagesResponse {
   page_index?: number;
@@ -118,6 +123,7 @@ export default function App() {
 
       try {
         const context = await view.getContext<ExtensionData>();
+        platformUrl = String(context.team?.url ?? "");
         const nextMode = context.extension.data.entry?.mode ?? "view";
         const nextConfig = normalizeDynamicContentConfig(
           context.extension.data.config,
@@ -1131,7 +1137,7 @@ function ContentCard({
   interactive: boolean;
 }) {
   const Icon = item.resourceType === "space" ? Layers : FileText;
-  const href = item.htmlUrl && item.htmlUrl !== "#" ? item.htmlUrl : null;
+  const href = resolveItemUrl(item, platformUrl);
   const isList = config.display === "list";
   const isImageCard = !isList && config.cardType === "image";
   const backgroundImage = pickBackgroundImage(config.background, item.id);
@@ -1218,12 +1224,19 @@ function ContentCard({
         front
       )}
       {interactive && href && (
-        <a
+        <button
           className="card-hit-area"
-          href={href}
-          target="_blank"
-          rel="noopener noreferrer"
+          type="button"
           aria-label={item.name}
+          onClick={() => {
+            // The extension frame is sandboxed without allow-popups, so
+            // target="_blank" is blocked; let the host open the link instead.
+            if (hasNexusBridge()) {
+              void router.open(href).catch(() => undefined);
+            } else {
+              window.open(href, "_blank", "noopener,noreferrer");
+            }
+          }}
         />
       )}
     </div>
