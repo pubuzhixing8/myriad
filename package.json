@@ -12,7 +12,7 @@
     "deploy:rc": "node scripts/nexus-platform.mjs use rc && npm run build-web && nexus deploy --non-interactive --no-verify -e development",
     "distribute:rc": "node scripts/nexus-platform.mjs distribute rc --env development",
     "build-native": "tsc --noEmit -p plugins/background/native-ui/tsconfig.json && tsc --noEmit -p plugins/tabs/native-ui/tsconfig.json",
-    "build-custom-ui": "npm run build --prefix web/button && npm run build --prefix web/cards && npm run build --prefix web/html && npm run build --prefix web/background && npm run build --prefix web/dynamic-content && npm run build --prefix web/tabs",
+    "build-custom-ui": "npm run build --prefix web/button && npm run build --prefix web/cards && npm run build --prefix web/html && npm run build --prefix web/embed && npm run build --prefix web/background && npm run build --prefix web/dynamic-content && npm run build --prefix web/tabs",
     "build-web": "npm run build-native && npm run build-custom-ui",
     "build": "tsc && npm run build-web"
   },
