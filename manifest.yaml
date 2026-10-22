@@ -11,6 +11,20 @@ translations:
   fallback:
     default: zh-CN
 extensions:
+  - key: myriad-tabs
+    target: pcm:wiki:document:block
+    title: Myriad - Tabs
+    icon: resource:button/myriad.svg
+    resource: tabs
+    layout: bodied
+    behavior: modal
+    edit:
+      title: Myriad - Tabs
+      icon: resource:button/myriad.svg
+      resource: tabs-editor
+      viewport:
+        size: max
+      openOnInsert: true
   - key: myriad-button
     target: pcm:wiki:document:block
     title: Myriad - Button
@@ -97,6 +111,11 @@ functions:
   - key: background-resolver
     handler: index.backgroundResolver
 resources:
+  - key: tabs
+    path: plugins/tabs/native-ui/main.tsx
+    render: native
+  - key: tabs-editor
+    path: web/tabs/dist
   - key: button
     path: web/button/dist
   - key: background

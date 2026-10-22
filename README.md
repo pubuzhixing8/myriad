@@ -8,6 +8,7 @@ PingCode Wiki `document:block` extensions built with Nexus:
 - **Myriad - Cards:** Independent block for up to six manually configured cards, with text, icons or Pixabay images.
 - **Myriad - Embed HTML:** Sandboxed block for custom HTML/CSS/JS or an external website URL.
 - **Myriad - Dynamic Content:** Custom UI block that lists Wiki spaces or pages matching configurable filters, with pagination.
+- **Myriad - Tabs:** Native UI tabs with a separate editable Wiki body for each tab. The Custom UI editor manages tab names, adding and deleting tabs, and previews the selection.
 
 Background and Button use `web/button/public/myriad.svg` for their Wiki slash-menu icon. The Button editor uses the same logo in its header.
 
