@@ -90,9 +90,32 @@ export function pickBackgroundImage(
   return option.files[hash % option.files.length];
 }
 
+/**
+ * Builds the link target for an item. Space links always come from the team
+ * URL (`/wiki/spaces/<identifier>`), never from the API response; pages keep
+ * their API URL and fall back to `/wiki/pages/<id>`.
+ */
+export function resolveItemUrl(
+  item: DynamicContentItem,
+  baseUrl = "",
+): string {
+  const base = baseUrl.replace(/\/+$/, "");
+  if (item.resourceType === "space") {
+    const key = item.identifier || item.id;
+    return base && key
+      ? `${base}/wiki/spaces/${encodeURIComponent(key)}`
+      : "";
+  }
+  if (item.htmlUrl && item.htmlUrl !== "#") return item.htmlUrl;
+  return base && item.id
+    ? `${base}/wiki/pages/${encodeURIComponent(item.id)}`
+    : "";
+}
+
 export interface WikiSpace {
   id: string;
   identifier?: string;
+  url?: string;
   name?: string;
   description?: string;
   scopeType?: string;
@@ -289,6 +312,7 @@ export function normalizeSpace(value: unknown): WikiSpace | null {
     id,
     name: String(value["name"] ?? ""),
     identifier: String(value["identifier"] ?? ""),
+    url: String(value["url"] ?? value["html_url"] ?? value["htmlUrl"] ?? ""),
     description: textFrom(value["description"]),
     scopeType: String(value["scopeType"] ?? value["scope_type"] ?? ""),
     updatedAt: Number(value["updatedAt"] ?? value["updated_at"] ?? 0),
@@ -319,7 +343,7 @@ export function normalizeSpaceItem(value: unknown): DynamicContentItem | null {
     resourceType: "space",
     name: space.name || space.identifier || "未命名空间",
     description: space.description || "",
-    htmlUrl: String(raw["htmlUrl"] ?? raw["html_url"] ?? ""),
+    htmlUrl: String(raw["htmlUrl"] ?? raw["html_url"] ?? space.url ?? ""),
     type: "space",
     identifier: space.identifier || "",
     scopeType: space.scopeType || "",
@@ -339,7 +363,9 @@ export function normalizePageItem(value: unknown): DynamicContentItem | null {
     resourceType: "page",
     name: String(value["name"] ?? value["title"] ?? "未命名页面"),
     description: textFrom(value["description"] ?? value["excerpt"] ?? value["summary"] ?? ""),
-    htmlUrl: String(value["htmlUrl"] ?? value["html_url"] ?? ""),
+    htmlUrl: String(
+      value["htmlUrl"] ?? value["html_url"] ?? value["url"] ?? "",
+    ),
     type: String(value["type"] ?? "page"),
     identifier: "",
     scopeType: "",
