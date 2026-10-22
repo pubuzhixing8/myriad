@@ -418,7 +418,6 @@ button {
   display: flex;
   align-items: center;
   gap: 12px;
-  border-bottom: 1px solid #e7eaf0;
 }
 
 .picker-top h2 {
@@ -448,7 +447,14 @@ button {
   display: flex;
   align-items: end;
   gap: 10px;
-  border-bottom: 1px solid #e7eaf0;
+}
+
+.picker-top,
+.picker-filters {
+  background-image: linear-gradient(#e7eaf0, #e7eaf0);
+  background-position: center bottom;
+  background-repeat: no-repeat;
+  background-size: calc(100% - 40px) 1px;
 }
 
 .search-box {
