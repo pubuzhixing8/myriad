@@ -124,57 +124,61 @@ export default function App() {
   return (
     <div className="embed-editor">
       <aside className="embed-settings">
-        <header><h1>Myriad - Embed</h1><p>将外部内容嵌入 Wiki 页面</p></header>
         <div className="embed-scroll">
-          <h2>来源</h2>
-          {Array.from(new Set(SOURCES.map((item) => item.group))).map((group) => (
-            <section key={group}>
-              <h3>{group}</h3>
-              {SOURCES.filter((item) => item.group === group).map((item) => (
-                <button
-                  key={item.id}
-                  className={`source-item ${config.source === item.id ? "active" : ""}`}
-                  onClick={() => {
-                    update("source", item.id as EmbedSource);
-                    setLoadPreview(false);
-                    setError("");
-                  }}
-                >
-                  <span>{item.name}</span><span>›</span>
-                </button>
-              ))}
-            </section>
-          ))}
-          <h2>配置</h2>
-          <label htmlFor="embed-url">{currentSource.name} 链接</label>
-          <input
-            id="embed-url"
-            type="url"
-            value={config.url}
-            placeholder={currentSource.placeholder}
-            onChange={(event) => {
-              update("url", event.target.value);
-              setLoadPreview(false);
-            }}
-          />
-          <p className="field-hint">{currentSource.hint}</p>
-          <label htmlFor="embed-height">显示高度（像素）</label>
-          <input
-            id="embed-height"
-            type="number"
-            min={200}
-            max={1000}
-            value={config.height}
-            onChange={(event) => update("height", Math.max(200, Math.min(1000, Number(event.target.value) || 200)))}
-          />
-          <label htmlFor="embed-title">无障碍标题</label>
-          <input id="embed-title" value={config.title} onChange={(event) => update("title", event.target.value)} />
-          <label htmlFor="embed-caption">下方说明</label>
-          <input id="embed-caption" value={config.caption} onChange={(event) => update("caption", event.target.value)} />
-          <label className="check-row">
-            <input type="checkbox" checked={config.showBorder} onChange={(event) => update("showBorder", event.target.checked)} />
-            显示边框
-          </label>
+          <section className="embed-section">
+            <h2>来源</h2>
+            {Array.from(new Set(SOURCES.map((item) => item.group))).map((group) => (
+              <div key={group}>
+                <h3>{group}</h3>
+                {SOURCES.filter((item) => item.group === group).map((item) => (
+                  <button
+                    key={item.id}
+                    className={`source-item ${config.source === item.id ? "active" : ""}`}
+                    onClick={() => {
+                      update("source", item.id as EmbedSource);
+                      setLoadPreview(false);
+                      setError("");
+                    }}
+                  >
+                    <span>{item.name}</span>
+                    <span aria-hidden="true">›</span>
+                  </button>
+                ))}
+              </div>
+            ))}
+          </section>
+          <section className="embed-section">
+            <h2>配置</h2>
+            <label htmlFor="embed-url">{currentSource.name} 链接</label>
+            <input
+              id="embed-url"
+              type="url"
+              value={config.url}
+              placeholder={currentSource.placeholder}
+              onChange={(event) => {
+                update("url", event.target.value);
+                setLoadPreview(false);
+              }}
+            />
+            <p className="field-hint">{currentSource.hint}</p>
+            <label htmlFor="embed-height">显示高度（像素）</label>
+            <input
+              id="embed-height"
+              type="number"
+              min={200}
+              max={1000}
+              value={config.height}
+              onChange={(event) => update("height", Math.max(200, Math.min(1000, Number(event.target.value) || 200)))}
+            />
+            <label htmlFor="embed-title">无障碍标题</label>
+            <input id="embed-title" value={config.title} onChange={(event) => update("title", event.target.value)} />
+            <label htmlFor="embed-caption">下方说明</label>
+            <input id="embed-caption" value={config.caption} onChange={(event) => update("caption", event.target.value)} />
+            <label className="check-row">
+              <input type="checkbox" checked={config.showBorder} onChange={(event) => update("showBorder", event.target.checked)} />
+              显示边框
+            </label>
+          </section>
         </div>
       </aside>
       <main className="embed-preview">
