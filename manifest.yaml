@@ -88,6 +88,21 @@ extensions:
       viewport:
         size: max
       openOnInsert: true
+  - key: myriad-embed
+    target: pcm:wiki:document:block
+    title: Myriad - Embed
+    icon: resource:button/myriad.svg
+    resource: embed
+    layout: block
+    behavior: modal
+    emitReadyEvent: true
+    edit:
+      title: Myriad - Embed
+      icon: resource:button/myriad.svg
+      resource: embed
+      viewport:
+        size: max
+      openOnInsert: true
   - key: myriad-dynamic-content
     target: pcm:wiki:document:block
     title: Myriad - Dynamic Content
@@ -129,6 +144,8 @@ resources:
     path: web/cards/dist
   - key: embed-html
     path: web/html/dist
+  - key: embed
+    path: web/embed/dist
   - key: dynamic-content
     path: web/dynamic-content/dist
 permissions:

@@ -7,6 +7,7 @@ PingCode Wiki `document:block` extensions built with Nexus:
 - **Myriad - Pages:** Custom UI block that loads Wiki pages dynamically and presents selected pages as configurable page cards.
 - **Myriad - Cards:** Independent block for up to six manually configured cards, with text, icons or Pixabay images.
 - **Myriad - Embed HTML:** Sandboxed block for custom HTML/CSS/JS or an external website URL.
+- **Myriad - Embed:** Source-aware Wiki block for Bilibili videos, Figma files, Canva designs, and CodePen pens.
 - **Myriad - Dynamic Content:** Custom UI block that lists Wiki spaces or pages matching configurable filters, with pagination.
 - **Myriad - Tabs:** Native UI tabs with a separate editable Wiki body for each tab. The Custom UI editor manages tab names, adding and deleting tabs, and previews the selection.
 
@@ -30,6 +31,10 @@ Cards is a separate `layout: block` extension; Pages keeps its existing configur
 ## Myriad - Embed HTML
 
 The max-size editor follows the prototype's code and URL modes, three example templates, sanitization, border, scrolling, and accessible iframe title. Code runs in a nested sandboxed iframe. URL previews load only when requested in the editor; saved blocks load the URL immediately. Sites can refuse embedding through their own response headers. Run `npm run dev --prefix web/html` and open `http://127.0.0.1:3105/` for the editor or add `?mode=view` for the block.
+
+## Myriad - Embed
+
+The separate Embed block groups sources into Video (Bilibili), Design (Figma and Canva), and Development (CodePen). It converts supported share links to their official iframe URLs, previews external content only after a click in the editor, and loads saved blocks immediately. Canva requires a published embed/view URL. Source permissions and browser iframe policies still apply. Run `npm run dev --prefix web/embed` and open `http://127.0.0.1:3106/` for the editor or add `?mode=view` for the block.
 
 ## Myriad - Dynamic Content
 
