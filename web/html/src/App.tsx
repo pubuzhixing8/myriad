@@ -17,6 +17,8 @@ import {
 } from "lucide-react";
 import {
   DEFAULT_CONFIG,
+  MAX_EMBED_HEIGHT,
+  MIN_EMBED_HEIGHT,
   normalizeConfig,
   validEmbedUrl,
   type EmbedHtmlConfig,
@@ -53,6 +55,7 @@ const LABELS = {
     always: "始终",
     hidden: "隐藏",
     height: "显示高度（像素）",
+    heightHelp: "范围 200–20,000。内容超过设定高度时，在区块内滚动。",
     title: "iframe 标题",
     titlePlaceholder: "无障碍标题",
     preview: "实时预览",
@@ -89,6 +92,7 @@ const LABELS = {
     always: "Always",
     hidden: "Hidden",
     height: "Display height (px)",
+    heightHelp: "Range: 200–20,000. Taller content scrolls inside the block.",
     title: "iframe title",
     titlePlaceholder: "Accessible title",
     preview: "Live preview",
@@ -112,6 +116,16 @@ function fallbackLocale(): Locale {
 
 function countMatches(value: string, expression: RegExp): number {
   return value.match(expression)?.length ?? 0;
+}
+
+function heightFromInput(value: string, fallback: number): number {
+  if (!value.trim()) return fallback;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.max(
+    MIN_EMBED_HEIGHT,
+    Math.min(MAX_EMBED_HEIGHT, Math.round(parsed)),
+  );
 }
 
 function htmlDocument(
@@ -235,6 +249,7 @@ export default function App() {
   const [config, setConfig] = useState<EmbedHtmlConfig>(() =>
     normalizeConfig(DEFAULT_CONFIG),
   );
+  const [heightInput, setHeightInput] = useState(String(DEFAULT_CONFIG.height));
   const [loadUrlPreview, setLoadUrlPreview] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -257,14 +272,20 @@ export default function App() {
         if (!active) return;
         const nextMode = context.extension?.data?.entry?.mode ?? "view";
         setMode(nextMode);
-        setConfig(normalizeConfig(context.extension?.data?.config));
+        const nextConfig = normalizeConfig(context.extension?.data?.config);
+        setConfig(nextConfig);
+        setHeightInput(String(nextConfig.height));
         setLocale(
           context.user?.locale ?? context.team?.locale ?? fallbackLocale(),
         );
         if (nextMode === "view") {
           subscription = await events.on<{ config?: unknown }>(
             "NEXUS_EXTENSION_DATA_CONFIG_CHANGED",
-            (payload) => setConfig(normalizeConfig(payload?.config)),
+            (payload) => {
+              const nextConfig = normalizeConfig(payload?.config);
+              setConfig(nextConfig);
+              setHeightInput(String(nextConfig.height));
+            },
           );
           requestAnimationFrame(
             () => void view.emitReadyEvent().catch(() => undefined),
@@ -303,7 +324,13 @@ export default function App() {
     setSaving(true);
     setError("");
     try {
-      if (hasNexusBridge()) await view.submit({ config });
+      const submittedConfig = normalizeConfig({
+        ...config,
+        height: heightFromInput(heightInput, config.height),
+      });
+      setConfig(submittedConfig);
+      setHeightInput(String(submittedConfig.height));
+      if (hasNexusBridge()) await view.submit({ config: submittedConfig });
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : String(reason));
     } finally {
@@ -439,16 +466,17 @@ export default function App() {
             <input
               id="embed-height"
               type="number"
-              min={200}
-              max={1000}
-              value={config.height}
-              onChange={(event) =>
-                update(
-                  "height",
-                  Math.max(200, Math.min(1000, Number(event.target.value) || 200)),
-                )
-              }
+              min={MIN_EMBED_HEIGHT}
+              max={MAX_EMBED_HEIGHT}
+              value={heightInput}
+              onChange={(event) => setHeightInput(event.target.value)}
+              onBlur={() => {
+                const height = heightFromInput(heightInput, config.height);
+                update("height", height);
+                setHeightInput(String(height));
+              }}
             />
+            <small className="field-help">{words.heightHelp}</small>
             <label className="field-label" htmlFor="doc-title">
               {words.title}
             </label>

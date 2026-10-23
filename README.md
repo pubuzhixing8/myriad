@@ -13,6 +13,10 @@ PingCode Wiki `document:block` extensions built with Nexus:
 
 All Wiki blocks use `web/button/public/myriad-slash.svg` for their slash-menu icon. Editor headers keep the existing `web/button/public/myriad.svg` logo.
 
+## Showcase page
+
+`examples/myriad-overview.html` is a self-contained, static overview of the eight Myriad blocks. Paste its contents into an Embed HTML block in code mode with sanitization enabled. For a full-page presentation, start with a display height around 3,500 px and adjust it to the Wiki page width; leave scrolling on Auto.
+
 ## Myriad - Pages
 
 In edit mode, Pages:

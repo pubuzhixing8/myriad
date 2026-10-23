@@ -1,6 +1,9 @@
 export type EmbedMode = "code" | "url";
 export type Scrolling = "auto" | "yes" | "no";
 
+export const MIN_EMBED_HEIGHT = 200;
+export const MAX_EMBED_HEIGHT = 20_000;
+
 export interface EmbedHtmlConfig {
   mode: EmbedMode;
   code: string;
@@ -49,7 +52,10 @@ export function normalizeConfig(value: unknown): EmbedHtmlConfig {
         : "auto",
     height:
       typeof source.height === "number" && Number.isFinite(source.height)
-        ? Math.max(200, Math.min(1000, Math.round(source.height)))
+        ? Math.max(
+            MIN_EMBED_HEIGHT,
+            Math.min(MAX_EMBED_HEIGHT, Math.round(source.height)),
+          )
         : DEFAULT_CONFIG.height,
     docTitle:
       typeof source.docTitle === "string"
