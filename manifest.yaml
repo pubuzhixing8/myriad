@@ -14,7 +14,7 @@ extensions:
   - key: myriad-tabs
     target: pcm:wiki:document:block
     title: Tabs
-    icon: resource:button/myriad.svg
+    icon: resource:button/myriad-slash.svg
     resource: tabs
     layout: bodied
     behavior: modal
@@ -28,7 +28,7 @@ extensions:
   - key: myriad-button
     target: pcm:wiki:document:block
     title: Button
-    icon: resource:button/myriad.svg
+    icon: resource:button/myriad-slash.svg
     resource: button
     layout: inline
     behavior: modal
@@ -43,7 +43,7 @@ extensions:
   - key: myriad-background
     target: pcm:wiki:document:block
     title: Background
-    icon: resource:button/myriad.svg
+    icon: resource:button/myriad-slash.svg
     resource: background
     layout: bodied
     behavior: modal
@@ -59,7 +59,7 @@ extensions:
   - key: myriad-card-grid
     target: pcm:wiki:document:block
     title: Cards
-    icon: resource:button/myriad.svg
+    icon: resource:button/myriad-slash.svg
     resource: card-grid
     layout: block
     resolver:
@@ -76,7 +76,7 @@ extensions:
   - key: myriad-html-iframe
     target: pcm:wiki:document:block
     title: Embed HTML
-    icon: resource:button/myriad.svg
+    icon: resource:button/myriad-slash.svg
     resource: embed-html
     layout: block
     behavior: modal
@@ -91,7 +91,7 @@ extensions:
   - key: myriad-embed
     target: pcm:wiki:document:block
     title: Embed
-    icon: resource:button/myriad.svg
+    icon: resource:button/myriad-slash.svg
     resource: embed
     layout: block
     behavior: modal
@@ -106,7 +106,7 @@ extensions:
   - key: myriad-dynamic-content
     target: pcm:wiki:document:block
     title: Dynamic Content
-    icon: resource:button/myriad.svg
+    icon: resource:button/myriad-slash.svg
     resource: dynamic-content
     layout: block
     resolver:
