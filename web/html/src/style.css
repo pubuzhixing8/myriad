@@ -95,6 +95,14 @@ button {
   tab-size: 2;
 }
 
+.field-help {
+  display: block;
+  margin-top: 7px;
+  color: #8792a3;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
 .segments {
   display: flex;
   gap: 6px;
