@@ -27,8 +27,11 @@ export const BACKGROUND_OPTIONS: BackgroundOption[] = [
     label: "水彩",
     files: [
       "background/Watercolor/charlesrondeau-water-1018808_1920.jpg",
+      "background/Watercolor/couleur-waves-1215449_1920.jpg",
       "background/Watercolor/pexels-beach-1851101_1920.jpg",
+      "background/Watercolor/schaferle-wave-1913559_1920.jpg",
       "background/Watercolor/stocksnap-sea-2601374_1920.jpg",
+      "background/Watercolor/wallner-seagull-10371327_1920.jpg",
     ],
   },
   {
@@ -36,6 +39,9 @@ export const BACKGROUND_OPTIONS: BackgroundOption[] = [
     label: "波浪",
     files: [
       "background/wavy/cnstnt-canyon-1356886_1920.jpg",
+      "background/wavy/falkenpost-desert-1654439_1920.jpg",
+      "background/wavy/kristindrd-desert-2296015_1920.jpg",
+      "background/wavy/nikolabelopitov-sand-2005064_1920.jpg",
       "background/wavy/stevesnyderphotography-arizona-9839880_1920.jpg",
       "background/wavy/tricell1991-tea-plantations-3941741_1920.jpg",
     ],
@@ -46,6 +52,7 @@ export const BACKGROUND_OPTIONS: BackgroundOption[] = [
     files: [
       "background/Nature/12019-maldives-1993704_1920.jpg",
       "background/Nature/guddanti-boat-5627042.jpg",
+      "background/Nature/jplenio-nature-3125912_1920.jpg",
       "background/Nature/neelam279-white-flowers-10281727_1920.jpg",
       "background/Nature/renegossner-water-8100724.jpg",
       "background/Nature/tama66-field-3379250_1920.jpg",
@@ -55,8 +62,11 @@ export const BACKGROUND_OPTIONS: BackgroundOption[] = [
     key: "business",
     label: "商务",
     files: [
+      "background/Business/alpeva232-work-4372725.jpg",
       "background/Business/alpeva232-work-4372725_1920.jpg",
       "background/Business/pexels-chairs-2181916_1920.jpg",
+      "background/Business/pexels-notebook-1850613_1920.jpg",
+      "background/Business/startupstockphotos-office-594132_1920.jpg",
       "background/Business/stocksnap-macbook-air-2628552_1920.jpg",
     ],
   },
@@ -65,6 +75,9 @@ export const BACKGROUND_OPTIONS: BackgroundOption[] = [
     label: "渐变",
     files: [
       "background/Gradient/alexanderstein-colorful-182220.jpg",
+      "background/Gradient/asharakhimov-color-4672161.jpg",
+      "background/Gradient/atish_lowanshi-happy-holi-hai-8636532_1920.jpg",
+      "background/Gradient/eismannhans-candy-50838_1920.jpg",
       "background/Gradient/inspiredimages-pencils-452238_1920.jpg",
       "background/Gradient/stux-to-paint-268185_1920.jpg",
     ],
@@ -72,22 +85,19 @@ export const BACKGROUND_OPTIONS: BackgroundOption[] = [
 ];
 
 /**
- * Picks a stable pseudo-random image for an item so cards keep their picture
- * across re-renders while the whole set still looks randomly distributed.
+ * Picks the image for a list position by cycling through the selected set in
+ * order (item 0 → first image, item 1 → second, …), wrapping around.
  */
 export function pickBackgroundImage(
   background: DynamicContentBackground,
-  seed: string,
+  index: number,
 ): string | null {
   if (background === "none") return null;
   const option = BACKGROUND_OPTIONS.find((item) => item.key === background);
   if (!option || option.files.length === 0) return null;
-  const value = `${seed}:${background}`;
-  let hash = 0;
-  for (let index = 0; index < value.length; index += 1) {
-    hash = (hash * 31 + value.charCodeAt(index)) >>> 0;
-  }
-  return option.files[hash % option.files.length];
+  const position = ((index % option.files.length) + option.files.length) %
+    option.files.length;
+  return option.files[position];
 }
 
 /**
