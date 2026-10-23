@@ -1177,11 +1177,12 @@ function ContentGrid({
         gap: config.gap,
       }}
     >
-      {items.map((item) => (
+      {items.map((item, index) => (
         <ContentCard
           key={item.id}
           config={config}
           item={item}
+          index={index}
           interactive={interactive}
         />
       ))}
@@ -1192,17 +1193,19 @@ function ContentGrid({
 function ContentCard({
   config,
   item,
+  index,
   interactive,
 }: {
   config: DynamicContentConfig;
   item: DynamicContentItem;
+  index: number;
   interactive: boolean;
 }) {
   const Icon = item.resourceType === "space" ? Layers : FileText;
   const href = resolveItemUrl(item, platformUrl);
   const isList = config.display === "list";
   const isImageCard = !isList && config.cardType === "image";
-  const backgroundImage = pickBackgroundImage(config.background, item.id);
+  const backgroundImage = pickBackgroundImage(config.background, index);
   const style = {
     borderRadius: config.radius,
     border: config.border ? "1px solid #e6e9f0" : "1px solid transparent",
