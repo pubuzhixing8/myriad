@@ -25,11 +25,11 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
-    "@pc-nexus/bridge": "^0.8.0",
-    "@pc-nexus/core": "^0.8.0-next.14",
-    "@pc-nexus/manifest": "^0.8.0-next.14",
-    "@pc-nexus/network": "^0.8.0",
-    "@pc-nexus/react": "^0.8.0",
+    "@pc-nexus/bridge": "^1.0.0-next.0",
+    "@pc-nexus/core": "^1.0.0-next.0",
+    "@pc-nexus/manifest": "^1.0.0-next.0",
+    "@pc-nexus/network": "^1.0.0-next.0",
+    "@pc-nexus/react": "^1.0.0-next.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0"
   }

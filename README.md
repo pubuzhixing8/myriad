@@ -81,7 +81,7 @@ npm run debug
 
 ## Runtime dependency
 
-`NxImage` is implemented in the Nexus runtime. This application declares its tag locally until a version of `@pc-nexus/react` containing it is published. The target PingCode host must include its Native UI mapping for the Background block. Button and Pages run in Custom UI and need no runtime changes.
+The Background block imports `NxImage` from `@pc-nexus/react` and layers its content with Native UI layout classes. The target PingCode host needs the shared `nx-image` mapping. The shared image component does not currently expose image fit or position, so the Native UI view cannot apply those editor settings. Button and Pages run in Custom UI.
 
 ## Extension layout
 
