@@ -10,7 +10,7 @@ import "./style.css";
 
 type EntryData = {
   config?: Partial<ButtonConfig>;
-  entry?: { mode?: "view" | "edit"; isEditing?: boolean };
+  entry?: { mode?: "view" | "pageEdit" | "edit" };
 };
 type ConfigChanged = { config?: Partial<ButtonConfig> };
 const CONFIG_CHANGED = "NEXUS_EXTENSION_DATA_CONFIG_CHANGED";
@@ -20,8 +20,7 @@ function fullConfig(value?: Partial<ButtonConfig>): ButtonConfig {
 }
 
 export default function App() {
-  const [mode, setMode] = useState<"view" | "edit" | null>(null);
-  const [isEditingPage, setIsEditingPage] = useState(false);
+  const [mode, setMode] = useState<"view" | "pageEdit" | "edit" | null>(null);
   const [config, setConfig] = useState<ButtonConfig>(fullConfig());
   useEffect(() => {
     let active = true;
@@ -31,7 +30,6 @@ export default function App() {
       .then((context) => {
         if (!active) return;
         setMode(context.extension.data.entry?.mode ?? "view");
-        setIsEditingPage(context.extension.data.entry?.isEditing === true);
         setConfig(fullConfig(context.extension.data.config));
         if (context.extension.data.entry?.mode !== "edit") {
           requestAnimationFrame(() => {
@@ -55,10 +53,10 @@ export default function App() {
     };
   }, []);
   if (mode === null) return <div className="loading">正在加载按钮…</div>;
-  if (mode === "view")
+  if (mode === "view" || mode === "pageEdit")
     return (
       <span className="viewer" data-iframe-size>
-        <ButtonSurface config={config} navigate={!isEditingPage} />
+        <ButtonSurface config={config} navigate={mode !== "pageEdit"} />
       </span>
     );
   return <Editor initialConfig={config} />;
