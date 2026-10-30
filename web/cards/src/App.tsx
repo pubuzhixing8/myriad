@@ -39,7 +39,7 @@ import {
 import "./style.css";
 
 type Locale = "zh-CN" | "en-US";
-type Mode = "view" | "edit";
+type Mode = "view" | "pageEdit" | "edit";
 type Photo = {
   id: string;
   name: string;
@@ -58,7 +58,7 @@ type SearchResult = {
 };
 type EntryData = {
   config?: unknown;
-  entry?: { mode?: Mode; isEditing?: boolean };
+  entry?: { mode?: Mode };
 };
 const DEFAULT_PHOTOS = [
   {
@@ -459,7 +459,6 @@ function Range({
 
 export default function App() {
   const [mode, setMode] = useState<Mode>("edit");
-  const [isEditingPage, setIsEditingPage] = useState(false);
   const [locale, setLocale] = useState<Locale>(fallbackLocale);
   const [config, setConfig] = useState<CardsConfig>(() =>
     normalizeConfig(null),
@@ -520,10 +519,9 @@ export default function App() {
 
   useEffect(() => {
     if (!hasNexusBridge()) {
+      const queryMode = new URLSearchParams(window.location.search).get("mode");
       setMode(
-        new URLSearchParams(window.location.search).get("mode") === "view"
-          ? "view"
-          : "edit",
+        queryMode === "view" || queryMode === "pageEdit" ? queryMode : "edit",
       );
       return;
     }
@@ -535,14 +533,11 @@ export default function App() {
         if (!active) return;
         const nextMode = context.extension?.data?.entry?.mode ?? "view";
         setMode(nextMode);
-        setIsEditingPage(
-          context.extension?.data?.entry?.isEditing === true,
-        );
         setConfig(normalizeConfig(context.extension?.data?.config));
         setLocale(
           context.user?.locale ?? context.team?.locale ?? fallbackLocale(),
         );
-        if (nextMode === "view") {
+        if (nextMode === "view" || nextMode === "pageEdit") {
           subscription = await events.on<{ config?: unknown }>(
             "NEXUS_EXTENSION_DATA_CONFIG_CHANGED",
             (payload) => {
@@ -650,10 +645,10 @@ export default function App() {
     if (hasNexusBridge()) await view.close();
   }
 
-  if (mode === "view")
+  if (mode === "view" || mode === "pageEdit")
     return (
       <main className="cards-view">
-        <CardGrid config={config} interactive={!isEditingPage} />
+        <CardGrid config={config} interactive={mode !== "pageEdit"} />
       </main>
     );
 
